@@ -1,5 +1,4 @@
 import Navbar from "./components/Navbar";
-import ScrollToTop from "./components/ScrollToTop";
 import HeroPricing from "./components/HeroPricing";
 import StatsBar from "./components/StatsBar";
 import PricingCards from "./components/PricingCards";
@@ -15,7 +14,6 @@ import Footer from "./components/Footer";
 export default function Home() {
   return (
     <main className="min-h-screen">
-      <ScrollToTop />
       <Navbar />
       <HeroPricing />
       <StatsBar />

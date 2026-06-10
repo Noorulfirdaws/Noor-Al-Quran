@@ -2,29 +2,53 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+/** Instantly scroll to (0,0) regardless of scroll-behavior: smooth */
+function hardScrollTop() {
+  const html = document.documentElement;
+  const prev = html.style.scrollBehavior;
+  html.style.scrollBehavior = "auto";
+  window.scrollTo(0, 0);
+  // Restore after a tick so smooth-scroll still works for user-initiated navigation
+  requestAnimationFrame(() => { html.style.scrollBehavior = prev; });
+}
+
 export default function ScrollToTop() {
   const pathname = usePathname();
 
+  // On mount: disable browser scroll restoration so it never fights us
   useEffect(() => {
-    // Skip if navigating to an anchor link
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+  }, []);
+
+  useEffect(() => {
     if (window.location.hash) return;
 
-    // Immediate scroll — fires before paint on client navigation
-    window.scrollTo(0, 0);
+    // Immediate — covers most cases
+    hardScrollTop();
 
-    // Second pass one frame later: Next.js App Router restores the previous
-    // scroll position after React renders. requestAnimationFrame runs after
-    // that restoration, overriding it cleanly without a visible flash.
-    const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
-    return () => cancelAnimationFrame(raf);
-  }, [pathname]); // re-run on every route change, not just initial mount
+    // Double-RAF: Next.js App Router restores scroll inside a single RAF.
+    // Firing inside a second RAF guarantees we run after that restoration.
+    let raf1: number, raf2: number;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => hardScrollTop());
+    });
+
+    // Belt-and-suspenders: also fight any late setTimeout-based restoration
+    const t = setTimeout(() => hardScrollTop(), 80);
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(t);
+    };
+  }, [pathname]);
 
   useEffect(() => {
-    // bfcache restore via browser back/forward buttons
+    // bfcache (browser back/forward button)
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted && !window.location.hash) {
-        window.scrollTo(0, 0);
-      }
+      if (e.persisted && !window.location.hash) hardScrollTop();
     };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);

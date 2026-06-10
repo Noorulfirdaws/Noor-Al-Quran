@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Menu, X, Sparkles } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
 
@@ -71,7 +72,7 @@ export default function Navbar() {
           <nav className="flex items-center justify-between h-16">
 
             {/* Logo — crescent + wordmark */}
-            <a href="/" className="flex items-center gap-3 flex-shrink-0 group">
+            <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
               <div className="w-8 h-8 relative">
                 <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
                   {/* Outer ring */}
@@ -94,7 +95,7 @@ export default function Navbar() {
                   Quran Memorization
                 </span>
               </div>
-            </a>
+            </Link>
 
             {/* Desktop centre links */}
             <div className="hidden md:flex items-center">

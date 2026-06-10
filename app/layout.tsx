@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
+import ScrollToTop from "./components/ScrollToTop";
 
 // General Arabic font
 import { Amiri } from "next/font/google";
@@ -70,6 +71,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} ${amiriQuran.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ScrollToTop />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
