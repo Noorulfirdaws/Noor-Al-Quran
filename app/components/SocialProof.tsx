@@ -7,10 +7,10 @@ const YOUTUBE_ID = "_943K51Z_2E";
 const reviews = [
   {
     name: "Sheikh Samih Jad",
-    country: "🕌 Scholar",
+    country: "🕌 Quran Scholar",
     avatar: "SJ",
     color: "#57d996",
-    text: "The Amazing Benefits of Quran for Rizq and Wellbeing",
+    text: "This application makes you a far better learner. The AI listens to every word you recite and corrects you instantly — exactly like a private teacher available at any hour. Anyone serious about Hifz should use it.",
     stars: 5,
   },
   {
@@ -18,7 +18,7 @@ const reviews = [
     country: "🇺🇸 USA",
     avatar: "FR",
     color: "#18c8d8",
-    text: "The goal tracking and planning tools keep me consistent. I went from reviewing 1 juz a week to 3. This app changed my relationship with the Quran.",
+    text: "Using Noor-ul-Quran made me a more disciplined and consistent learner. The goal planning shows you exactly what to revise each day. I went from 1 juz a week to 3. No other app comes close.",
     stars: 5,
   },
   {
@@ -26,7 +26,7 @@ const reviews = [
     country: "🇸🇦 KSA",
     avatar: "YM",
     color: "#f7ca45",
-    text: "The mistake detection is unbelievable — it catches every single error in real time. My teacher was impressed with how much faster I progressed.",
+    text: "The real-time mistake detection is unlike anything else. It catches every tajweed error instantly. My teacher noticed how much faster I was progressing after just two weeks of using this app.",
     stars: 5,
   },
   {
@@ -34,7 +34,7 @@ const reviews = [
     country: "🇨🇦 Canada",
     avatar: "MT",
     color: "#a78bfa",
-    text: "As a working mother of 3 I never thought I could memorize the Quran. Noor-ul-Quran's 15-minute plans made it possible. JazakAllah khair.",
+    text: "As a working mother of 3 I never thought I could complete my Hifz. The 15-minute daily plans fit into my schedule perfectly. Noor-ul-Quran turned an impossible dream into a daily reality. JazakAllah khair.",
     stars: 5,
   },
 ];

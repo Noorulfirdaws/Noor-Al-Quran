@@ -179,14 +179,15 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         basmalaAudio.onpause = () => { if (!basmalaAudio.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
 
         const afterBasmala = () => {
-          skipBasmalaRef.current = true;   // prevent re-entry
+          skipBasmalaRef.current = true;   // prevent re-entry into the Basmala branch
           playAyahRef.current?.(surahNumber, 1);
-          // reset after a tick so future calls to playAyah(s,1) get fresh Basmala
+          // reset after a tick so future manual calls to playAyah(s,1) get a fresh Basmala
           setTimeout(() => { skipBasmalaRef.current = false; }, 0);
         };
         basmalaAudio.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
-        basmalaAudio.onerror = afterBasmala; // on failure, skip straight to ayah 1
-        basmalaAudio.play().catch(afterBasmala);
+        // onerror receives a DOM Event — use a wrapper to avoid passing it as argument
+        basmalaAudio.onerror = () => afterBasmala();
+        basmalaAudio.play().catch(() => afterBasmala());
         return;
       }
       // Reset guard once we're past the injection point

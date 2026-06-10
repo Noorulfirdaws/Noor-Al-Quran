@@ -59,11 +59,11 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Main nav */}
+      {/* Main nav — transparent only on the home page when unscrolled */}
       <div
         className={`transition-all duration-300 ${
-          scrolled
-            ? "bg-[#070a08]/95 backdrop-blur-md border-b border-[#57d996]/10 shadow-[0_1px_24px_rgba(87,217,150,0.06)]"
+          scrolled || pathname !== "/"
+            ? "bg-[#070a08]/97 backdrop-blur-md border-b border-[#57d996]/10 shadow-[0_1px_24px_rgba(87,217,150,0.06)]"
             : "bg-transparent"
         }`}
       >
