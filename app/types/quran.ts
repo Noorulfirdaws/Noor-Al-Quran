@@ -73,7 +73,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   showArabic: true,
   showTransliteration: true,
   showTranslation: true,
-  reciterId: "ar.alafasy",
+  reciterId: "everyayah.alafasy",
   repeatMode: "off",
   repeatCount: 3,
 };

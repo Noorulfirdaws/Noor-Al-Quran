@@ -7,7 +7,7 @@ import type {
 } from "../types/quran";
 import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
-import { getAyahAudioUrl, getFallbackAyahAudioUrl } from "../services/audioService";
+import { getAyahAudioUrl } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
 
 const SETTINGS_KEY = "noor:reader-settings";
@@ -77,35 +77,39 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   const [highlightedAyah, setHighlightedAyah] = useState<number | null>(null);
   const [revealedWords, setRevealedWords] = useState<Set<string>>(new Set());
 
-  // Direct audio refs — no singleton, no DOM tricks
+  // One persistent audio element — created once on client, reused for all playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Pre-fetched next-ayah audio — eliminates the ~1 s gap between verses
-  const nextAudioRef = useRef<{ url: string; audio: HTMLAudioElement } | null>(null);
-  // Guard: when true, skip the Basmala injection so onended doesn't re-trigger it
+  // Guard: skip Basmala injection when playing the actual ayah 1 after Basmala finishes
   const skipBasmalaRef = useRef(false);
   const surahMetaRef = useRef(surahMeta);
   surahMetaRef.current = surahMeta;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
-  // Store playAyah in a ref so onended callbacks don't go stale
+  // Keep playAyah in a ref so event-listener callbacks never go stale
   const playAyahRef = useRef<((s: number, a: number) => void) | null>(null);
 
-  // Migrate old EveryAyah reciter IDs to Islamic Network
+  // Create the persistent audio element once on mount
   useEffect(() => {
-    const MAP: Record<string, string> = {
-      "Alafasy_128kbps": "ar.alafasy",
-      "Abdul_Basit_Murattal_192kbps": "ar.abdurrahmaansudais",
-      "Saad_al-Ghamdi_128kbps": "ar.husary",
-      "Minshawy_Murattal_128kbps": "ar.minshawi",
-      "Mohammad_al_Tablawi_128kbps": "ar.shaatree",
+    const el = new Audio();
+    el.preload = "auto";
+    audioRef.current = el;
+    return () => {
+      el.pause();
+      el.src = "";
+      el.onplaying = null;
+      el.onwaiting = null;
+      el.onpause = null;
+      el.onended = null;
+      el.onerror = null;
     };
+  }, []);
+
+  // Load saved settings
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<ReaderSettings>;
-        if (parsed.reciterId && MAP[parsed.reciterId]) {
-          parsed.reciterId = MAP[parsed.reciterId];
-        }
         setSettings({ ...DEFAULT_SETTINGS, ...parsed });
       }
     } catch { /* ignore */ }
@@ -119,119 +123,107 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // ── Audio ────────────────────────────────────────────────────────────────────
+  // ── Audio helpers ────────────────────────────────────────────────────────────
+
+  const resetAudioState = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.onplaying = null;
+    el.onwaiting = null;
+    el.onpause = null;
+    el.onended = null;
+    el.onerror = null;
+    el.pause();
+    // Don't clear src here — let the next play set it
+  }, []);
 
   const stopAudioSilently = useCallback(() => {
-    if (audioRef.current) {
-      const a = audioRef.current;
-      a.onended = null;
-      a.onerror = null;
-      a.onplaying = null;
-      a.onpause = null;
-      a.onwaiting = null;
-      a.pause();
-      a.src = "";
-      audioRef.current = null;
-    }
-    // Discard any pre-fetched next ayah
-    if (nextAudioRef.current) {
-      nextAudioRef.current.audio.src = "";
-      nextAudioRef.current = null;
+    resetAudioState();
+    const el = audioRef.current;
+    if (el) el.src = "";
+  }, [resetAudioState]);
+
+  // Core play function — sets src on persistent element and calls play()
+  const playSrc = useCallback((
+    url: string,
+    onEnded: () => void,
+  ) => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    // Detach old handlers before changing src
+    el.onplaying = null;
+    el.onwaiting = null;
+    el.onpause = null;
+    el.onended = null;
+    el.onerror = null;
+    el.pause();
+
+    el.src = url;
+    el.load(); // explicit load — required in some browsers after src change
+
+    el.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
+    el.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
+    el.onpause = () => {
+      if (!el.ended) { setIsPlaying(false); setIsAudioLoading(false); }
+    };
+    el.onended = onEnded;
+    el.onerror = () => {
+      setIsAudioLoading(false);
+      setIsPlaying(false);
+      setAudioError("Could not load audio. Try a different reciter.");
+      setTimeout(() => setAudioError(null), 5000);
+    };
+
+    const p = el.play();
+    if (p) {
+      p.catch((err: Error) => {
+        if (err.name === "AbortError") return; // normal — src was changed
+        setIsAudioLoading(false);
+        setIsPlaying(false);
+        setAudioError("Playback blocked. Tap/click the play button again.");
+        setTimeout(() => setAudioError(null), 5000);
+      });
     }
   }, []);
 
   const playAyah = useCallback(
     (surahNumber: number, ayahNumber: number) => {
-      // ── Basmala injection ─────────────────────────────────────────────────
-      // For surahs other than Al-Fatiha (1) and At-Tawbah (9), silently play
-      // the Basmala audio (= surah 1 ayah 1) before ayah 1.
-      // skipBasmalaRef guards against the infinite loop that would occur when
-      // onended calls playAyah(surahNumber, 1) again.
+
+      // ── Basmala injection ──────────────────────────────────────────────────
+      // Play surah 1 ayah 1 silently before ayah 1 of any surah except 1 and 9
       if (
         ayahNumber === 1 &&
         surahNumber !== 1 &&
         surahNumber !== 9 &&
         !skipBasmalaRef.current
       ) {
-        // Tear down cleanly
-        if (audioRef.current) {
-          const a = audioRef.current;
-          a.onended = null; a.onerror = null; a.onplaying = null;
-          a.onpause = null; a.onwaiting = null;
-          a.pause(); a.src = "";
-          audioRef.current = null;
-        }
-        if (nextAudioRef.current) { nextAudioRef.current.audio.src = ""; nextAudioRef.current = null; }
-
         const basmalaUrl = getAyahAudioUrl(settingsRef.current.reciterId, 1, 1);
-        const basmalaAudio = new Audio(basmalaUrl);
-        audioRef.current = basmalaAudio;
 
-        // Show player as "Ayah 1" during Basmala — no special Basmala indicator
         setPlayingAyah(1);
         setIsAudioLoading(true);
         setIsPlaying(false);
         setHighlightedAyah(null);
         setAudioError(null);
 
-        basmalaAudio.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
-        basmalaAudio.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
-        basmalaAudio.onpause = () => { if (!basmalaAudio.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
-
         const afterBasmala = () => {
-          skipBasmalaRef.current = true;   // prevent re-entry into the Basmala branch
+          skipBasmalaRef.current = true;
           playAyahRef.current?.(surahNumber, 1);
-          // reset after a tick so future manual calls to playAyah(s,1) get a fresh Basmala
           setTimeout(() => { skipBasmalaRef.current = false; }, 0);
         };
-        basmalaAudio.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
-        // onerror: try fallback CDN for Basmala (surah 1, ayah 1) first
-        basmalaAudio.onerror = () => {
-          const fbUrl = getFallbackAyahAudioUrl(settingsRef.current.reciterId, 1, 1);
-          if (fbUrl && audioRef.current === basmalaAudio) {
-            const fb = new Audio(fbUrl);
-            audioRef.current = fb;
-            fb.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
-            fb.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
-            fb.onerror = () => afterBasmala();
-            basmalaAudio.onended = null;
-            fb.play().catch(() => afterBasmala());
-          } else {
-            afterBasmala();
-          }
-        };
-        basmalaAudio.play().catch(() => {
-          // play() rejection may race with onerror — let onerror handle it
-          setTimeout(() => { if (audioRef.current === basmalaAudio) afterBasmala(); }, 200);
+
+        playSrc(basmalaUrl, () => {
+          setIsPlaying(false);
+          setIsAudioLoading(false);
+          afterBasmala();
         });
         return;
       }
-      // Reset guard once we're past the injection point
+
       skipBasmalaRef.current = false;
 
-      // Tear down current track but NOT the next-ayah preload — we may reuse it
-      if (audioRef.current) {
-        const a = audioRef.current;
-        a.onended = null; a.onerror = null; a.onplaying = null;
-        a.onpause = null; a.onwaiting = null;
-        a.pause(); a.src = "";
-        audioRef.current = null;
-      }
-
+      // ── Main playback ──────────────────────────────────────────────────────
       const url = getAyahAudioUrl(settingsRef.current.reciterId, surahNumber, ayahNumber);
-
-      // Reuse pre-fetched audio if URL matches — eliminates buffering gap
-      let audio: HTMLAudioElement;
-      const cached = nextAudioRef.current;
-      if (cached && cached.url === url) {
-        audio = cached.audio;
-        nextAudioRef.current = null;
-      } else {
-        // Discard stale preload
-        if (nextAudioRef.current) { nextAudioRef.current.audio.src = ""; nextAudioRef.current = null; }
-        audio = new Audio(url);
-      }
-      audioRef.current = audio;
 
       setPlayingAyah(ayahNumber);
       setIsAudioLoading(true);
@@ -239,109 +231,35 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       setHighlightedAyah(ayahNumber);
       setAudioError(null);
 
-      audio.onplaying = () => {
-        setIsAudioLoading(false);
-        setIsPlaying(true);
-      };
-
-      audio.onwaiting = () => {
-        setIsAudioLoading(true);
-        setIsPlaying(false);
-      };
-
-      audio.onpause = () => {
-        if (!audio.ended) {
-          setIsPlaying(false);
-          setIsAudioLoading(false);
-        }
-      };
-
-      audio.onended = () => {
+      playSrc(url, () => {
         setIsPlaying(false);
         setIsAudioLoading(false);
+
         const meta = surahMetaRef.current;
         const repeat = settingsRef.current.repeatMode;
 
         if (repeat === "verse") {
-          // Replay same ayah — call through ref to avoid stale closure
           playAyahRef.current?.(surahNumber, ayahNumber);
           return;
         }
 
-        const nextAyah = ayahNumber + 1;
-        if (meta && nextAyah <= meta.numberOfAyahs) {
-          playAyahRef.current?.(surahNumber, nextAyah);
+        const next = ayahNumber + 1;
+        if (meta && next <= meta.numberOfAyahs) {
+          playAyahRef.current?.(surahNumber, next);
         } else {
           setPlayingAyah(null);
           setHighlightedAyah(null);
         }
-      };
+      });
 
-      const tryFallback = (surahNum: number, ayahNum: number) => {
-        const fallbackUrl = getFallbackAyahAudioUrl(settingsRef.current.reciterId, surahNum, ayahNum);
-        if (!fallbackUrl || audioRef.current !== audio) return; // already replaced
-        const fb = new Audio(fallbackUrl);
-        audioRef.current = audio; // keep same ref slot — reassign below
-        fb.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
-        fb.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
-        fb.onpause = () => { if (!fb.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
-        fb.onended = audio.onended; // reuse same onended (advance / repeat)
-        fb.onerror = () => {
-          setIsAudioLoading(false);
-          setIsPlaying(false);
-          setAudioError("Could not load audio — check your connection");
-          setTimeout(() => setAudioError(null), 5000);
-        };
-        audio.onended = null; audio.onerror = null;
-        audio.pause(); audio.src = "";
-        audioRef.current = fb;
-        fb.play().catch((err: Error) => {
-          if (err.name === "AbortError") return;
-          setIsAudioLoading(false);
-          setIsPlaying(false);
-          setAudioError("Could not load audio — check your connection");
-          setTimeout(() => setAudioError(null), 5000);
-        });
-      };
-
-      audio.onerror = () => {
-        // Try fallback CDN before showing error
-        tryFallback(surahNumber, ayahNumber);
-      };
-
-      const p = audio.play();
-      if (p) {
-        p.catch((err: Error) => {
-          if (err.name === "AbortError") return; // src changed, ignore
-          // play() rejection often fires alongside onerror — give onerror a tick first
-          setTimeout(() => {
-            if (audioRef.current === audio) tryFallback(surahNumber, ayahNumber);
-          }, 0);
-        });
-      }
-
-      // Pre-fetch next ayah immediately so it's buffered by the time we need it
-      const meta2 = surahMetaRef.current;
-      const nextNum = ayahNumber + 1;
-      const repeat2 = settingsRef.current.repeatMode;
-      if (repeat2 !== "verse" && meta2 && nextNum <= meta2.numberOfAyahs) {
-        const nextUrl = getAyahAudioUrl(settingsRef.current.reciterId, surahNumber, nextNum);
-        const nextAudio = new Audio();
-        nextAudio.preload = "auto";
-        nextAudio.src = nextUrl;
-        nextAudioRef.current = { url: nextUrl, audio: nextAudio };
-      }
-
-      // Save reading progress
+      // Save progress
       const meta = surahMetaRef.current;
-      if (meta) {
-        saveProgress({ surahNumber, ayahNumber, surahName: meta.englishName });
-      }
+      if (meta) saveProgress({ surahNumber, ayahNumber, surahName: meta.englishName });
     },
-    [stopAudioSilently]
+    [playSrc]
   );
 
-  // Keep the ref in sync after every render so onended closures call the latest version
+  // Keep ref current so event callbacks never go stale
   playAyahRef.current = playAyah;
 
   const pauseAudio = useCallback(() => {
@@ -349,8 +267,9 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resumeAudio = useCallback(() => {
-    if (audioRef.current?.paused) {
-      audioRef.current.play().catch(() => {});
+    const el = audioRef.current;
+    if (el?.paused && el.src) {
+      el.play().catch(() => {});
     }
   }, []);
 
@@ -420,11 +339,6 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   }, [ayahs, ayahsWithWords]);
 
   const hideAll = useCallback(() => setRevealedWords(new Set()), []);
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => { stopAudioSilently(); };
-  }, [stopAudioSilently]);
 
   return (
     <Ctx.Provider value={{

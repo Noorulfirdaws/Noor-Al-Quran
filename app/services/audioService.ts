@@ -7,6 +7,15 @@ import type { Reciter, RepeatMode } from "../types/quran";
 //   "surah-ayah"   → everyayah.com/data/{id}/{surah:03d}{ayah:03d}.mp3
 
 export const RECITERS: Reciter[] = [
+  // ── Primary EveryAyah reciters (CORS-enabled, globally reliable) ──────────
+  {
+    id: "everyayah.alafasy",
+    name: "Mishary Rashid Alafasy",
+    arabicName: "مشاري راشد العفاسي",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/Alafasy_128kbps",
+    urlFormat: "surah-ayah",
+  },
   // ── Murattal – Islamic Network CDN ───────────────────────────────────────
   {
     id: "ar.alafasy",
