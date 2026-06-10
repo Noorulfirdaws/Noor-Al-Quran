@@ -14,6 +14,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "مشاري راشد العفاسي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.alafasy",
+    fallbackPrefix: "https://everyayah.com/data/Alafasy_128kbps",
   },
   {
     id: "ar.abdurrahmaansudais",
@@ -21,6 +22,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "عبدالرحمن السديس",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdurrahmaansudais",
+    fallbackPrefix: "https://everyayah.com/data/Abdurrahmaan_As-Sudais_192kbps",
   },
   {
     id: "ar.saoodshuraym",
@@ -28,6 +30,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "سعود الشريم",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.saoodshuraym",
+    fallbackPrefix: "https://everyayah.com/data/Saud_al-Ghamdi_128kbps",
   },
   {
     id: "ar.mahermuaiqly",
@@ -35,6 +38,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "ماهر المعيقلي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.mahermuaiqly",
+    fallbackPrefix: "https://everyayah.com/data/Maher_AlMuaiqly_128kbps",
   },
   {
     id: "ar.husary",
@@ -42,6 +46,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "محمود خليل الحصري",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.husary",
+    fallbackPrefix: "https://everyayah.com/data/Husary_128kbps",
   },
   {
     id: "ar.minshawi",
@@ -49,6 +54,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "محمد صديق المنشاوي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.minshawi",
+    fallbackPrefix: "https://everyayah.com/data/Minshawy_Murattal_128kbps",
   },
   {
     id: "ar.shaatree",
@@ -56,6 +62,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "أبو بكر الشاطري",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.shaatree",
+    fallbackPrefix: "https://everyayah.com/data/Abu_Bakr_Ash-Shaatree_128kbps",
   },
   {
     id: "ar.ahmedajamy",
@@ -63,6 +70,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "أحمد بن علي العجمي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.ahmedajamy",
+    fallbackPrefix: "https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah",
   },
   {
     id: "ar.hanirifai",
@@ -70,6 +78,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "هاني الرفاعي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.hanirifai",
+    fallbackPrefix: "https://everyayah.com/data/Hani_Rifai_192kbps",
   },
   {
     id: "ar.hudhaify",
@@ -77,6 +86,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "علي الحذيفي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.hudhaify",
+    fallbackPrefix: "https://everyayah.com/data/Ali_Alhuthaify_128kbps",
   },
   {
     id: "ar.muhammadayyoub",
@@ -84,6 +94,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "محمد أيوب",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.muhammadayyoub",
+    fallbackPrefix: "https://everyayah.com/data/Muhammad_Ayyoub_128kbps",
   },
   {
     id: "ar.muhammadjibreel",
@@ -91,6 +102,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "محمد جبريل",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.muhammadjibreel",
+    fallbackPrefix: "https://everyayah.com/data/Muhammad_Jibreel_128kbps",
   },
   {
     id: "ar.abdullahbasfar",
@@ -98,6 +110,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "عبدالله بصفر",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdullahbasfar",
+    fallbackPrefix: "https://everyayah.com/data/Abdullah_Basfar_128kbps",
   },
   {
     id: "ar.ibrahimakhbar",
@@ -105,6 +118,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "إبراهيم الأخضر",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.ibrahimakhbar",
+    fallbackPrefix: "https://everyayah.com/data/Ibrahim_Akhdar_128kbps",
   },
   {
     id: "ar.parhizgar",
@@ -112,6 +126,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "ناصر القطامي",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.parhizgar",
+    fallbackPrefix: "https://everyayah.com/data/Nasser_Alqatami_128kbps",
   },
   // ── Mujawwad – Islamic Network CDN ───────────────────────────────────────
   {
@@ -120,6 +135,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "المنشاوي (مجوّد)",
     style: "mujawwad",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.minshawimujawwad",
+    fallbackPrefix: "https://everyayah.com/data/Minshawy_Mujawwad_128kbps",
   },
   {
     id: "ar.abdulsamad",
@@ -127,6 +143,7 @@ export const RECITERS: Reciter[] = [
     arabicName: "عبد الباسط عبد الصمد (مجوّد)",
     style: "mujawwad",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdulsamad",
+    fallbackPrefix: "https://everyayah.com/data/Abdul_Basit_Mujawwad_128kbps",
   },
   // ── EveryAyah CDN (surah+ayah URL format) ────────────────────────────────
   {
@@ -218,6 +235,23 @@ export function getAyahAudioUrl(
   // Default: Islamic Network CDN — global ayah number
   const globalNumber = toGlobalAyah(surahNumber, ayahNumber);
   return `${reciter.urlPrefix}/${globalNumber}.mp3`;
+}
+
+/**
+ * Returns an EveryAyah fallback URL when the primary CDN fails.
+ * All EveryAyah URLs use the surah-ayah ({surah:03d}{ayah:03d}.mp3) format.
+ * Returns null if no fallback is configured for this reciter.
+ */
+export function getFallbackAyahAudioUrl(
+  reciterId: string,
+  surahNumber: number,
+  ayahNumber: number
+): string | null {
+  const reciter = getReciterById(reciterId);
+  if (!reciter.fallbackPrefix) return null;
+  const s = String(surahNumber).padStart(3, "0");
+  const a = String(ayahNumber).padStart(3, "0");
+  return `${reciter.fallbackPrefix}/${s}${a}.mp3`;
 }
 
 // Legacy export kept for any existing tests

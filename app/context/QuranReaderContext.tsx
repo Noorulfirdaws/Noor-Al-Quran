@@ -7,7 +7,7 @@ import type {
 } from "../types/quran";
 import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
-import { getAyahAudioUrl } from "../services/audioService";
+import { getAyahAudioUrl, getFallbackAyahAudioUrl } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
 
 const SETTINGS_KEY = "noor:reader-settings";
@@ -185,9 +185,25 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
           setTimeout(() => { skipBasmalaRef.current = false; }, 0);
         };
         basmalaAudio.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
-        // onerror receives a DOM Event — use a wrapper to avoid passing it as argument
-        basmalaAudio.onerror = () => afterBasmala();
-        basmalaAudio.play().catch(() => afterBasmala());
+        // onerror: try fallback CDN for Basmala (surah 1, ayah 1) first
+        basmalaAudio.onerror = () => {
+          const fbUrl = getFallbackAyahAudioUrl(settingsRef.current.reciterId, 1, 1);
+          if (fbUrl && audioRef.current === basmalaAudio) {
+            const fb = new Audio(fbUrl);
+            audioRef.current = fb;
+            fb.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
+            fb.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
+            fb.onerror = () => afterBasmala();
+            basmalaAudio.onended = null;
+            fb.play().catch(() => afterBasmala());
+          } else {
+            afterBasmala();
+          }
+        };
+        basmalaAudio.play().catch(() => {
+          // play() rejection may race with onerror — let onerror handle it
+          setTimeout(() => { if (audioRef.current === basmalaAudio) afterBasmala(); }, 200);
+        });
         return;
       }
       // Reset guard once we're past the injection point
@@ -261,28 +277,46 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         }
       };
 
-      audio.onerror = () => {
-        setIsAudioLoading(false);
-        setIsPlaying(false);
-        const code = (audio.error?.code ?? 0);
-        const msgs: Record<number, string> = {
-          1: "Playback aborted",
-          2: "Network error loading audio",
-          3: "Audio decoding failed",
-          4: "Audio format not supported",
+      const tryFallback = (surahNum: number, ayahNum: number) => {
+        const fallbackUrl = getFallbackAyahAudioUrl(settingsRef.current.reciterId, surahNum, ayahNum);
+        if (!fallbackUrl || audioRef.current !== audio) return; // already replaced
+        const fb = new Audio(fallbackUrl);
+        audioRef.current = audio; // keep same ref slot — reassign below
+        fb.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
+        fb.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
+        fb.onpause = () => { if (!fb.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
+        fb.onended = audio.onended; // reuse same onended (advance / repeat)
+        fb.onerror = () => {
+          setIsAudioLoading(false);
+          setIsPlaying(false);
+          setAudioError("Could not load audio — check your connection");
+          setTimeout(() => setAudioError(null), 5000);
         };
-        setAudioError(msgs[code] ?? "Could not play audio");
-        setTimeout(() => setAudioError(null), 5000);
+        audio.onended = null; audio.onerror = null;
+        audio.pause(); audio.src = "";
+        audioRef.current = fb;
+        fb.play().catch((err: Error) => {
+          if (err.name === "AbortError") return;
+          setIsAudioLoading(false);
+          setIsPlaying(false);
+          setAudioError("Could not load audio — check your connection");
+          setTimeout(() => setAudioError(null), 5000);
+        });
+      };
+
+      audio.onerror = () => {
+        // Try fallback CDN before showing error
+        tryFallback(surahNumber, ayahNumber);
       };
 
       const p = audio.play();
       if (p) {
         p.catch((err: Error) => {
           if (err.name === "AbortError") return; // src changed, ignore
-          setIsAudioLoading(false);
-          setIsPlaying(false);
-          setAudioError(`Playback blocked: ${err.message}`);
-          setTimeout(() => setAudioError(null), 5000);
+          // play() rejection often fires alongside onerror — give onerror a tick first
+          setTimeout(() => {
+            if (audioRef.current === audio) tryFallback(surahNumber, ayahNumber);
+          }, 0);
         });
       }
 

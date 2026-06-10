@@ -50,6 +50,8 @@ export interface Reciter {
    * "surah-ayah"   → {prefix}/{surah:03d}{ayah:03d}.mp3  (EveryAyah CDN)
    */
   urlFormat?: "global-ayah" | "surah-ayah";
+  /** Optional EveryAyah fallback prefix (surah-ayah format) used when primary URL fails */
+  fallbackPrefix?: string;
 }
 
 export type RepeatMode = "off" | "verse" | "range" | "memorization";
