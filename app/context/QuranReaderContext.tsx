@@ -79,6 +79,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
   // Direct audio refs — no singleton, no DOM tricks
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Pre-fetched next-ayah audio — eliminates the ~1 s gap between verses
+  const nextAudioRef = useRef<{ url: string; audio: HTMLAudioElement } | null>(null);
   const surahMetaRef = useRef(surahMeta);
   surahMetaRef.current = surahMeta;
   const settingsRef = useRef(settings);
@@ -129,14 +131,37 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       a.src = "";
       audioRef.current = null;
     }
+    // Discard any pre-fetched next ayah
+    if (nextAudioRef.current) {
+      nextAudioRef.current.audio.src = "";
+      nextAudioRef.current = null;
+    }
   }, []);
 
   const playAyah = useCallback(
     (surahNumber: number, ayahNumber: number) => {
-      stopAudioSilently();
+      // Tear down current track but NOT the next-ayah preload — we may reuse it
+      if (audioRef.current) {
+        const a = audioRef.current;
+        a.onended = null; a.onerror = null; a.onplaying = null;
+        a.onpause = null; a.onwaiting = null;
+        a.pause(); a.src = "";
+        audioRef.current = null;
+      }
 
       const url = getAyahAudioUrl(settingsRef.current.reciterId, surahNumber, ayahNumber);
-      const audio = new Audio(url);
+
+      // Reuse pre-fetched audio if URL matches — eliminates buffering gap
+      let audio: HTMLAudioElement;
+      const cached = nextAudioRef.current;
+      if (cached && cached.url === url) {
+        audio = cached.audio;
+        nextAudioRef.current = null;
+      } else {
+        // Discard stale preload
+        if (nextAudioRef.current) { nextAudioRef.current.audio.src = ""; nextAudioRef.current = null; }
+        audio = new Audio(url);
+      }
       audioRef.current = audio;
 
       setPlayingAyah(ayahNumber);
@@ -206,6 +231,18 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
           setAudioError(`Playback blocked: ${err.message}`);
           setTimeout(() => setAudioError(null), 5000);
         });
+      }
+
+      // Pre-fetch next ayah immediately so it's buffered by the time we need it
+      const meta2 = surahMetaRef.current;
+      const nextNum = ayahNumber + 1;
+      const repeat2 = settingsRef.current.repeatMode;
+      if (repeat2 !== "verse" && meta2 && nextNum <= meta2.numberOfAyahs) {
+        const nextUrl = getAyahAudioUrl(settingsRef.current.reciterId, surahNumber, nextNum);
+        const nextAudio = new Audio();
+        nextAudio.preload = "auto";
+        nextAudio.src = nextUrl;
+        nextAudioRef.current = { url: nextUrl, audio: nextAudio };
       }
 
       // Save reading progress

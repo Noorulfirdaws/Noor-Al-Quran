@@ -1,27 +1,23 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 
 export default function ScrollToTop() {
-  useEffect(() => {
-    // Don't override hash anchors (e.g. /#pricing, /#features)
+  // Fires before browser paint — prevents the flash of restored scroll position
+  useLayoutEffect(() => {
     if (!window.location.hash) {
       window.scrollTo(0, 0);
     }
+  }, []);
 
-    const onPageHide = () => {
-      if (!window.location.hash) window.scrollTo(0, 0);
-    };
-    window.addEventListener("pagehide", onPageHide);
-
+  useEffect(() => {
+    // bfcache restore (back/forward button)
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted && !window.location.hash) window.scrollTo(0, 0);
+      if (e.persisted && !window.location.hash) {
+        window.scrollTo(0, 0);
+      }
     };
     window.addEventListener("pageshow", onPageShow);
-
-    return () => {
-      window.removeEventListener("pagehide", onPageHide);
-      window.removeEventListener("pageshow", onPageShow);
-    };
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   return null;

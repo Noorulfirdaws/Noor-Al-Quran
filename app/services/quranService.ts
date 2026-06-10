@@ -115,17 +115,32 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
     revelationType: arabic.revelationType as "Meccan" | "Medinan",
   };
 
-  const ayahs: AyahData[] = arabic.ayahs.map((a, i) => ({
-    number: a.number,
-    numberInSurah: a.numberInSurah,
-    text: a.text,
-    transliteration: translit.ayahs[i]?.text ?? "",
-    translation: translation.ayahs[i]?.text ?? "",
-    juz: a.juz,
-    page: a.page,
-    hizbQuarter: a.hizbQuarter,
-    sajda: a.sajda,
-  }));
+  // The quran-uthmani edition prepends Bismillah to the first ayah text for
+  // all surahs except Al-Fatiha (1) and At-Tawbah (9). Since SurahReader
+  // renders a separate Bismillah header, we strip it from the ayah text to
+  // avoid duplication. The regex matches the Uthmani Bismillah with any
+  // combination of Unicode diacritics / alternative characters.
+  const BISMILLAH_RE =
+    /^(بِسْمِ\s*ٱللَّهِ\s*ٱلرَّحْمَٰنِ\s*ٱلرَّحِيمِ|بِسْمِ\s*اللَّهِ\s*الرَّحْمَنِ\s*الرَّحِيمِ)\s*/u;
+  const needsStrip = meta.number !== 1 && meta.number !== 9;
+
+  const ayahs: AyahData[] = arabic.ayahs.map((a, i) => {
+    let text = a.text;
+    if (needsStrip && a.numberInSurah === 1) {
+      text = text.replace(BISMILLAH_RE, "").trimStart();
+    }
+    return {
+      number: a.number,
+      numberInSurah: a.numberInSurah,
+      text,
+      transliteration: translit.ayahs[i]?.text ?? "",
+      translation: translation.ayahs[i]?.text ?? "",
+      juz: a.juz,
+      page: a.page,
+      hizbQuarter: a.hizbQuarter,
+      sajda: a.sajda,
+    };
+  });
 
   const result: SurahResult = { meta, ayahs };
   cacheSet(cacheKey, result);

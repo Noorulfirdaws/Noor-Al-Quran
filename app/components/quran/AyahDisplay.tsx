@@ -128,14 +128,14 @@ export default function AyahDisplay({
   return (
     <div
       id={`ayah-${ayah.numberInSurah}`}
-      className={`group px-4 sm:px-8 py-6 border-b border-white/5 transition-all duration-300 ${
+      className={`group px-4 sm:px-8 py-4 border-b border-white/5 transition-all duration-300 ${
         isHighlighted ? "bg-[#57d996]/8 border-l-2 border-l-[#57d996]" : "hover:bg-white/[0.02]"
       }`}
       onClick={() => setHighlightedAyah(ayah.numberInSurah)}
     >
       <div className="max-w-3xl mx-auto">
         {/* Ayah header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center text-xs text-white/40 font-mono flex-shrink-0 font-bold">
               {ayah.numberInSurah}

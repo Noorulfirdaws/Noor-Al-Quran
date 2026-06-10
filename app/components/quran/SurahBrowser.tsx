@@ -65,38 +65,41 @@ export default function SurahBrowser() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-20 space-y-8">
-        {/* Continue reading + bookmarks */}
-        {(progress || bookmarks.length > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {progress && (
-              <Link
-                href={`/quran/${progress.surahNumber}`}
-                className="flex items-center gap-3 bg-[#57d996]/10 border border-[#57d996]/20 hover:border-[#57d996]/40 rounded-2xl px-4 py-3.5 transition-all group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-[#57d996]/20 flex items-center justify-center flex-shrink-0">
-                  <Clock size={18} className="text-[#57d996]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white/40 text-[10px] uppercase tracking-wider">Continue reading</div>
-                  <div className="text-white font-bold text-sm truncate">{progress.surahName}</div>
-                  <div className="text-[#57d996] text-xs">Ayah {progress.ayahNumber}</div>
-                </div>
-                <span className="text-white/20 group-hover:text-white/60 transition-colors">→</span>
-              </Link>
-            )}
+        {/* ── Continue reading + bookmarks ───────────────────────────── */}
+        {progress && (
+          <Link
+            href={`/quran/${progress.surahNumber}`}
+            className="flex items-center gap-4 bg-gradient-to-r from-[#57d996]/15 to-[#57d996]/5 border border-[#57d996]/30 hover:border-[#57d996]/60 rounded-2xl px-5 py-4 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-[#57d996]/25 flex items-center justify-center flex-shrink-0">
+              <Clock size={22} className="text-[#57d996]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[#57d996]/70 text-[10px] font-bold uppercase tracking-widest mb-0.5">Continue where you left off</div>
+              <div className="text-white font-black text-base truncate">{progress.surahName}</div>
+              <div className="text-white/40 text-xs mt-0.5">Ayah {progress.ayahNumber} · Last opened {new Date(progress.updatedAt).toLocaleDateString()}</div>
+            </div>
+            <div className="flex-shrink-0 text-right">
+              <div className="text-[#57d996] text-xs font-bold group-hover:translate-x-1 transition-transform inline-block">Resume →</div>
+              <div className="text-white/20 text-[10px] mt-0.5">Surah {progress.surahNumber}</div>
+            </div>
+          </Link>
+        )}
+
+        {bookmarks.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {bookmarks.map((bm) => (
               <Link
                 key={`${bm.surahNumber}-${bm.ayahNumber}`}
                 href={`/quran/${bm.surahNumber}?ayah=${bm.ayahNumber}`}
-                className="flex items-center gap-3 bg-[#f7ca45]/5 border border-[#f7ca45]/15 hover:border-[#f7ca45]/30 rounded-2xl px-4 py-3.5 transition-all group"
+                className="flex items-center gap-3 bg-[#f7ca45]/5 border border-[#f7ca45]/15 hover:border-[#f7ca45]/30 rounded-xl px-3 py-3 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#f7ca45]/15 flex items-center justify-center flex-shrink-0">
-                  <Bookmark size={16} className="text-[#f7ca45]" />
+                <div className="w-8 h-8 rounded-lg bg-[#f7ca45]/15 flex items-center justify-center flex-shrink-0">
+                  <Bookmark size={14} className="text-[#f7ca45]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white/40 text-[10px] uppercase tracking-wider">Bookmark</div>
-                  <div className="text-white font-bold text-sm truncate">{bm.surahName}</div>
-                  <div className="text-[#f7ca45] text-xs">Ayah {bm.ayahNumber}</div>
+                  <div className="text-white font-bold text-xs truncate">{bm.surahName}</div>
+                  <div className="text-[#f7ca45]/70 text-[10px]">Ayah {bm.ayahNumber}</div>
                 </div>
               </Link>
             ))}

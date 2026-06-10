@@ -45,6 +45,11 @@ export interface Reciter {
   arabicName: string;
   style: "murattal" | "mujawwad";
   urlPrefix: string;
+  /** How to build the per-ayah URL.
+   * "global-ayah"  → {prefix}/{globalAyah}.mp3          (Islamic Network CDN)
+   * "surah-ayah"   → {prefix}/{surah:03d}{ayah:03d}.mp3  (EveryAyah CDN)
+   */
+  urlFormat?: "global-ayah" | "surah-ayah";
 }
 
 export type RepeatMode = "off" | "verse" | "range" | "memorization";

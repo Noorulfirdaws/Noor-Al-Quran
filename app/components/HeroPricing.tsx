@@ -57,8 +57,14 @@ function VideoBackground({ slide, active }: { slide: typeof slides[0]; active: b
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (active && videoRef.current) {
-      videoRef.current.play().catch(() => {});
+    const v = videoRef.current;
+    if (!v) return;
+    if (active) {
+      // Load if not already loaded
+      if (v.readyState === 0) v.load();
+      v.play().catch(() => {});
+    } else {
+      v.pause();
     }
   }, [active]);
 
@@ -74,7 +80,11 @@ function VideoBackground({ slide, active }: { slide: typeof slides[0]; active: b
         muted
         loop
         playsInline
-        preload="auto"
+        preload={active ? "auto" : "none"}
+        onCanPlay={(e) => {
+          const v = e.target as HTMLVideoElement;
+          if (active) v.play().catch(() => {});
+        }}
       >
         {slide.videoSrcs.map((src, i) => (
           <source key={i} src={src} type="video/mp4" />

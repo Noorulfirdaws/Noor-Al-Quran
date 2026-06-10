@@ -1,8 +1,13 @@
 import type { Reciter, RepeatMode } from "../types/quran";
 
 // ─── Available reciters ───────────────────────────────────────────────────────
+//
+// Two CDN formats supported:
+//   "global-ayah"  → cdn.islamic.network/quran/audio/128/{id}/{globalAyah}.mp3
+//   "surah-ayah"   → everyayah.com/data/{id}/{surah:03d}{ayah:03d}.mp3
 
 export const RECITERS: Reciter[] = [
+  // ── Murattal – Islamic Network CDN ───────────────────────────────────────
   {
     id: "ar.alafasy",
     name: "Mishary Rashid Alafasy",
@@ -18,11 +23,18 @@ export const RECITERS: Reciter[] = [
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdurrahmaansudais",
   },
   {
-    id: "ar.minshawi",
-    name: "Mohamed El-Minshawi",
-    arabicName: "محمد المنشاوي",
+    id: "ar.saoodshuraym",
+    name: "Saud Al-Shuraim",
+    arabicName: "سعود الشريم",
     style: "murattal",
-    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.minshawi",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.saoodshuraym",
+  },
+  {
+    id: "ar.mahermuaiqly",
+    name: "Maher Al-Muaiqly",
+    arabicName: "ماهر المعيقلي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.mahermuaiqly",
   },
   {
     id: "ar.husary",
@@ -32,11 +44,138 @@ export const RECITERS: Reciter[] = [
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.husary",
   },
   {
+    id: "ar.minshawi",
+    name: "Mohamed El-Minshawi",
+    arabicName: "محمد صديق المنشاوي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.minshawi",
+  },
+  {
     id: "ar.shaatree",
     name: "Abu Bakr Ash-Shaatree",
     arabicName: "أبو بكر الشاطري",
     style: "murattal",
     urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.shaatree",
+  },
+  {
+    id: "ar.ahmedajamy",
+    name: "Ahmed Al-Ajamy",
+    arabicName: "أحمد بن علي العجمي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.ahmedajamy",
+  },
+  {
+    id: "ar.hanirifai",
+    name: "Hani Ar-Rifai",
+    arabicName: "هاني الرفاعي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.hanirifai",
+  },
+  {
+    id: "ar.hudhaify",
+    name: "Ali Al-Huthaify",
+    arabicName: "علي الحذيفي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.hudhaify",
+  },
+  {
+    id: "ar.muhammadayyoub",
+    name: "Muhammad Ayyoub",
+    arabicName: "محمد أيوب",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.muhammadayyoub",
+  },
+  {
+    id: "ar.muhammadjibreel",
+    name: "Muhammad Jibreel",
+    arabicName: "محمد جبريل",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.muhammadjibreel",
+  },
+  {
+    id: "ar.abdullahbasfar",
+    name: "Abdullah Basfar",
+    arabicName: "عبدالله بصفر",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdullahbasfar",
+  },
+  {
+    id: "ar.ibrahimakhbar",
+    name: "Ibrahim Al-Akhdar",
+    arabicName: "إبراهيم الأخضر",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.ibrahimakhbar",
+  },
+  {
+    id: "ar.parhizgar",
+    name: "Nasser Al-Qatami",
+    arabicName: "ناصر القطامي",
+    style: "murattal",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.parhizgar",
+  },
+  // ── Mujawwad – Islamic Network CDN ───────────────────────────────────────
+  {
+    id: "ar.minshawimujawwad",
+    name: "El-Minshawi (Mujawwad)",
+    arabicName: "المنشاوي (مجوّد)",
+    style: "mujawwad",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.minshawimujawwad",
+  },
+  {
+    id: "ar.abdulsamad",
+    name: "Abdul Basit Abdul Samad (Mujawwad)",
+    arabicName: "عبد الباسط عبد الصمد (مجوّد)",
+    style: "mujawwad",
+    urlPrefix: "https://cdn.islamic.network/quran/audio/128/ar.abdulsamad",
+  },
+  // ── EveryAyah CDN (surah+ayah URL format) ────────────────────────────────
+  {
+    id: "everyayah.husary-mujawwad",
+    name: "Al-Husary (Mujawwad)",
+    arabicName: "الحصري (مجوّد)",
+    style: "mujawwad",
+    urlPrefix: "https://everyayah.com/data/Husary_128kbps_Mujawwad",
+    urlFormat: "surah-ayah",
+  },
+  {
+    id: "everyayah.tablawy",
+    name: "Mohammad Al-Tablawi",
+    arabicName: "محمد الطبلاوي",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/Mohammad_al_Tablawi_128kbps",
+    urlFormat: "surah-ayah",
+  },
+  {
+    id: "everyayah.khalil",
+    name: "Khalil Al-Husary (Muallim)",
+    arabicName: "خليل الحصري (معلم)",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/khalil_al_husary_128kbps",
+    urlFormat: "surah-ayah",
+  },
+  {
+    id: "everyayah.ali-sufi",
+    name: "Ali Sufi",
+    arabicName: "علي الصوفي",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/Ali_Alhuthaify_128kbps",
+    urlFormat: "surah-ayah",
+  },
+  {
+    id: "everyayah.noreen",
+    name: "Noreen Muhammad Siddiq",
+    arabicName: "نورين محمد صديق",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/Noreen_Mohammed_Siddiq_192kbps",
+    urlFormat: "surah-ayah",
+  },
+  {
+    id: "everyayah.saad-ghamdi",
+    name: "Saad Al-Ghamdi",
+    arabicName: "سعد الغامدي",
+    style: "murattal",
+    urlPrefix: "https://everyayah.com/data/Saad_al-Ghamdi_128kbps",
+    urlFormat: "surah-ayah",
   },
 ];
 
@@ -71,6 +210,12 @@ export function getAyahAudioUrl(
   ayahNumber: number
 ): string {
   const reciter = getReciterById(reciterId);
+  if (reciter.urlFormat === "surah-ayah") {
+    const s = String(surahNumber).padStart(3, "0");
+    const a = String(ayahNumber).padStart(3, "0");
+    return `${reciter.urlPrefix}/${s}${a}.mp3`;
+  }
+  // Default: Islamic Network CDN — global ayah number
   const globalNumber = toGlobalAyah(surahNumber, ayahNumber);
   return `${reciter.urlPrefix}/${globalNumber}.mp3`;
 }
