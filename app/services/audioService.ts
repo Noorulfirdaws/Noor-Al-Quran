@@ -230,7 +230,8 @@ export function toGlobalAyah(surahNumber: number, ayahInSurah: number): number {
   return (SURAH_STARTS[surahNumber] ?? 1) + ayahInSurah - 1;
 }
 
-export function getAyahAudioUrl(
+/** Build the direct CDN URL (used internally and for the proxy). */
+export function buildDirectUrl(
   reciterId: string,
   surahNumber: number,
   ayahNumber: number
@@ -241,9 +242,22 @@ export function getAyahAudioUrl(
     const a = String(ayahNumber).padStart(3, "0");
     return `${reciter.urlPrefix}/${s}${a}.mp3`;
   }
-  // Default: Islamic Network CDN — global ayah number
   const globalNumber = toGlobalAyah(surahNumber, ayahNumber);
   return `${reciter.urlPrefix}/${globalNumber}.mp3`;
+}
+
+/**
+ * Returns the proxied audio URL.
+ * All requests go through /api/audio?url=... so the browser never hits an
+ * external CDN directly — no CORS issues, no region-blocking.
+ */
+export function getAyahAudioUrl(
+  reciterId: string,
+  surahNumber: number,
+  ayahNumber: number
+): string {
+  const direct = buildDirectUrl(reciterId, surahNumber, ayahNumber);
+  return `/api/audio?url=${encodeURIComponent(direct)}`;
 }
 
 /**

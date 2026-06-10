@@ -160,7 +160,6 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     el.pause();
 
     el.src = url;
-    el.load(); // explicit load — required in some browsers after src change
 
     el.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
     el.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };

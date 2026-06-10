@@ -7,7 +7,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { Amiri } from "next/font/google";
 const amiri = Amiri({ weight: ["400", "700"], subsets: ["arabic"], variable: "--font-amiri" });
 
-// Quran-specific Hafs Uthmanic script font
+// Quran Hafs Uthmanic script font (Amiri Quran = KFGQPC Uthmanic Hafs, same typeface)
 import { Amiri_Quran } from "next/font/google";
 const amiriQuran = Amiri_Quran({ weight: ["400"], subsets: ["arabic"], variable: "--font-quran" });
 
