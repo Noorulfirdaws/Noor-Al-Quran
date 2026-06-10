@@ -2,51 +2,59 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-/** Instantly scroll to (0,0) regardless of scroll-behavior: smooth */
+/** Instantly scroll to top AND wipe Next.js's stored scroll state. */
 function hardScrollTop() {
+  // 1. Disable smooth scroll so scrollTo is instant
   const html = document.documentElement;
-  const prev = html.style.scrollBehavior;
   html.style.scrollBehavior = "auto";
+
+  // 2. Zero out the scroll position Next.js App Router stores in history.state
+  //    (__NA is the key Next.js uses: { x: number, y: number })
+  try {
+    const s = window.history.state ?? {};
+    window.history.replaceState({ ...s, __NA: { x: 0, y: 0 } }, "");
+  } catch { /* ignore SecurityError in sandboxed iframes */ }
+
+  // 3. Scroll immediately
   window.scrollTo(0, 0);
-  // Restore after a tick so smooth-scroll still works for user-initiated navigation
-  requestAnimationFrame(() => { html.style.scrollBehavior = prev; });
+
+  // 4. Restore smooth scroll after the frame so user-initiated scrolls still animate
+  requestAnimationFrame(() => {
+    html.style.scrollBehavior = "";
+  });
 }
 
 export default function ScrollToTop() {
   const pathname = usePathname();
 
-  // On mount: disable browser scroll restoration so it never fights us
   useEffect(() => {
-    if ("scrollRestoration" in history) {
-      history.scrollRestoration = "manual";
-    }
+    // Tell the browser not to restore scroll on its own either
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   }, []);
 
   useEffect(() => {
     if (window.location.hash) return;
 
-    // Immediate — covers most cases
     hardScrollTop();
 
-    // Double-RAF: Next.js App Router restores scroll inside a single RAF.
-    // Firing inside a second RAF guarantees we run after that restoration.
-    let raf1: number, raf2: number;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => hardScrollTop());
+    // Next.js may still call window.scrollTo() from inside its own RAF.
+    // A second RAF + a timeout cover both cases.
+    let r1: number, r2: number;
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => hardScrollTop());
     });
-
-    // Belt-and-suspenders: also fight any late setTimeout-based restoration
-    const t = setTimeout(() => hardScrollTop(), 80);
+    const t1 = setTimeout(hardScrollTop, 50);
+    const t2 = setTimeout(hardScrollTop, 150);
 
     return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(t);
+      cancelAnimationFrame(r1);
+      cancelAnimationFrame(r2);
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, [pathname]);
 
   useEffect(() => {
-    // bfcache (browser back/forward button)
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted && !window.location.hash) hardScrollTop();
     };
