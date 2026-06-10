@@ -56,9 +56,9 @@ export default function AyahDisplay({
     if (isWordByWord && hasWords) {
       return (
         <p
-          className={`${arabicSize} leading-loose text-right mb-3`}
+          className={`${arabicSize} leading-relaxed text-right mb-1.5`}
           dir="rtl"
-          style={{ fontFamily: "var(--font-amiri), serif" }}
+          style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
         >
           {words.map((w) => {
             const isSelected =
@@ -81,7 +81,7 @@ export default function AyahDisplay({
               </span>
             );
           })}
-          <span className="text-[#57d996]/60 text-2xl mx-2" style={{ fontFamily: "var(--font-amiri), serif" }}>
+          <span className="text-[#57d996]/60 text-2xl mx-2" style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}>
             {`۝${arabicNumeral(ayah.numberInSurah)}`}
           </span>
         </p>
@@ -90,7 +90,7 @@ export default function AyahDisplay({
 
     if (isMemorization) {
       return (
-        <p className={`${arabicSize} leading-loose text-right mb-3`} dir="rtl" style={{ fontFamily: "var(--font-amiri), serif" }}>
+        <p className={`${arabicSize} leading-relaxed text-right mb-1.5`} dir="rtl" style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}>
           {(hasWords ? words : ayah.text.split(/\s+/)).map((item, i) => {
             const wordText = typeof item === "string" ? item : item.textUthmani;
             const key = `${ayah.numberInSurah}-${i + 1}`;
@@ -113,9 +113,9 @@ export default function AyahDisplay({
 
     return (
       <p
-        className={`${arabicSize} leading-loose text-right mb-3`}
+        className={`${arabicSize} leading-relaxed text-right mb-1.5`}
         dir="rtl"
-        style={{ fontFamily: "var(--font-amiri), serif" }}
+        style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
       >
         {ayah.text}{" "}
         <span className="text-[#57d996]/60 text-2xl">
@@ -128,37 +128,36 @@ export default function AyahDisplay({
   return (
     <div
       id={`ayah-${ayah.numberInSurah}`}
-      className={`group px-4 sm:px-8 py-4 border-b border-white/5 transition-all duration-300 ${
-        isHighlighted ? "bg-[#57d996]/8 border-l-2 border-l-[#57d996]" : "hover:bg-white/[0.02]"
+      className={`group px-4 sm:px-6 py-2.5 border-b border-white/[0.04] transition-all duration-200 ${
+        isHighlighted ? "bg-[#57d996]/8 border-l-2 border-l-[#57d996]" : "hover:bg-white/[0.015]"
       }`}
       onClick={() => setHighlightedAyah(ayah.numberInSurah)}
     >
       <div className="max-w-3xl mx-auto">
-        {/* Ayah header */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center text-xs text-white/40 font-mono flex-shrink-0 font-bold">
+        {/* Ayah badge + actions */}
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full border border-white/15 flex items-center justify-center text-[10px] text-white/35 font-mono flex-shrink-0">
               {ayah.numberInSurah}
             </div>
-            <div className="text-white/20 text-[10px] uppercase tracking-widest hidden sm:block">
-              Juz {ayah.juz} · Page {ayah.page}
-            </div>
+            <span className="text-white/15 text-[9px] uppercase tracking-widest hidden sm:inline">
+              Juz {ayah.juz} · P.{ayah.page}
+            </span>
           </div>
-
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => { e.stopPropagation(); handlePlay(); }}
-              className="p-2 text-white/40 hover:text-[#57d996] hover:bg-[#57d996]/10 rounded-lg transition-all"
-              title="Play ayah"
+              className="p-1.5 text-white/35 hover:text-[#57d996] hover:bg-[#57d996]/10 rounded-md transition-all"
+              title="Play"
             >
-              <Play size={14} />
+              <Play size={13} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); toggleBookmark(); }}
-              className="p-2 text-white/40 hover:text-[#f7ca45] hover:bg-[#f7ca45]/10 rounded-lg transition-all"
+              className="p-1.5 text-white/35 hover:text-[#f7ca45] hover:bg-[#f7ca45]/10 rounded-md transition-all"
               title={bookmarked ? "Remove bookmark" : "Bookmark"}
             >
-              {bookmarked ? <BookmarkCheck size={14} className="text-[#f7ca45]" /> : <Bookmark size={14} />}
+              {bookmarked ? <BookmarkCheck size={13} className="text-[#f7ca45]" /> : <Bookmark size={13} />}
             </button>
           </div>
         </div>
@@ -166,12 +165,12 @@ export default function AyahDisplay({
         {renderArabic()}
 
         {settings.showTransliteration && ayah.transliteration && (
-          <p className="text-white/40 text-sm italic mb-2 text-right">{ayah.transliteration}</p>
+          <p className="text-white/35 text-xs italic mb-1 text-right leading-relaxed">{ayah.transliteration}</p>
         )}
 
         {settings.showTranslation && ayah.translation && (
-          <p className="text-white/60 text-sm leading-relaxed border-t border-white/5 pt-3">
-            <span className="text-white/20 text-xs mr-1">({ayah.numberInSurah})</span>
+          <p className="text-white/55 text-[13px] leading-snug border-t border-white/[0.04] pt-1.5">
+            <span className="text-white/20 text-[10px] mr-1">({ayah.numberInSurah})</span>
             {ayah.translation}
           </p>
         )}

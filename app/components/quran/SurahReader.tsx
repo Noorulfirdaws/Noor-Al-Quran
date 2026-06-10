@@ -229,7 +229,7 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
             );
           })}
           {surahMeta && (
-            <div className="ml-auto text-white/25 text-sm" style={{ fontFamily: "var(--font-amiri), serif" }}>
+            <div className="ml-auto text-white/25 text-sm" style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}>
               {surahMeta.name}
             </div>
           )}
@@ -285,7 +285,7 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
         {/* Bismillah header — shown for all surahs except 1 and 9 */}
         {!loadingAyahs && ayahs.length > 0 && surahNumber !== 1 && surahNumber !== 9 && (
           <div className="max-w-3xl mx-auto px-4 sm:px-8 pt-6 pb-3 text-center border-b border-white/5">
-            <p className="text-2xl sm:text-3xl leading-relaxed text-white/70" style={{ fontFamily: "var(--font-amiri), serif", direction: "rtl" }}>
+            <p className="text-2xl sm:text-3xl leading-relaxed text-white/70" style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif", direction: "rtl" }}>
               بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
             </p>
             <p className="text-white/20 text-[10px] mt-0.5 italic">Bismillāhi r-raḥmāni r-raḥīm</p>

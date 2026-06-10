@@ -46,7 +46,7 @@ export default function WordTooltip({ word, onClose }: Props) {
       {/* Arabic word */}
       <div
         className="text-4xl text-center mb-3 text-white leading-loose"
-        style={{ fontFamily: "var(--font-amiri), serif", direction: "rtl" }}
+        style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif", direction: "rtl" }}
       >
         {word.textUthmani}
       </div>
@@ -70,7 +70,7 @@ export default function WordTooltip({ word, onClose }: Props) {
             <span className="text-white/30 text-[10px] w-20 uppercase tracking-wider">Root</span>
             <span
               className="text-[#57d996] font-bold text-base"
-              style={{ fontFamily: "var(--font-amiri), serif" }}
+              style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
             >
               {word.rootLetters}
             </span>

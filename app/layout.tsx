@@ -3,9 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
 
-// Arabic font for Quran text in phone mockups
+// General Arabic font
 import { Amiri } from "next/font/google";
 const amiri = Amiri({ weight: ["400", "700"], subsets: ["arabic"], variable: "--font-amiri" });
+
+// Quran-specific Hafs Uthmanic script font
+import { Amiri_Quran } from "next/font/google";
+const amiriQuran = Amiri_Quran({ weight: ["400"], subsets: ["arabic"], variable: "--font-quran" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,7 +67,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} ${amiriQuran.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <LanguageProvider>{children}</LanguageProvider>

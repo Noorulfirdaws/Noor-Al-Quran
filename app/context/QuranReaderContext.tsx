@@ -81,6 +81,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Pre-fetched next-ayah audio — eliminates the ~1 s gap between verses
   const nextAudioRef = useRef<{ url: string; audio: HTMLAudioElement } | null>(null);
+  // Guard: when true, skip the Basmala injection so onended doesn't re-trigger it
+  const skipBasmalaRef = useRef(false);
   const surahMetaRef = useRef(surahMeta);
   surahMetaRef.current = surahMeta;
   const settingsRef = useRef(settings);
@@ -141,12 +143,15 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   const playAyah = useCallback(
     (surahNumber: number, ayahNumber: number) => {
       // ── Basmala injection ─────────────────────────────────────────────────
-      // For surahs other than Al-Fatiha (1) and At-Tawbah (9), play the
-      // Basmala audio (= surah 1 ayah 1 from the same reciter) before ayah 1.
+      // For surahs other than Al-Fatiha (1) and At-Tawbah (9), silently play
+      // the Basmala audio (= surah 1 ayah 1) before ayah 1.
+      // skipBasmalaRef guards against the infinite loop that would occur when
+      // onended calls playAyah(surahNumber, 1) again.
       if (
         ayahNumber === 1 &&
         surahNumber !== 1 &&
-        surahNumber !== 9
+        surahNumber !== 9 &&
+        !skipBasmalaRef.current
       ) {
         // Tear down cleanly
         if (audioRef.current) {
@@ -162,7 +167,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         const basmalaAudio = new Audio(basmalaUrl);
         audioRef.current = basmalaAudio;
 
-        setPlayingAyah(0); // 0 = Basmala indicator
+        // Show player as "Ayah 1" during Basmala — no special Basmala indicator
+        setPlayingAyah(1);
         setIsAudioLoading(true);
         setIsPlaying(false);
         setHighlightedAyah(null);
@@ -171,22 +177,20 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         basmalaAudio.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
         basmalaAudio.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
         basmalaAudio.onpause = () => { if (!basmalaAudio.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
-        basmalaAudio.onended = () => {
-          setIsPlaying(false);
-          setIsAudioLoading(false);
-          // Now play the actual ayah 1
+
+        const afterBasmala = () => {
+          skipBasmalaRef.current = true;   // prevent re-entry
           playAyahRef.current?.(surahNumber, 1);
+          // reset after a tick so future calls to playAyah(s,1) get fresh Basmala
+          setTimeout(() => { skipBasmalaRef.current = false; }, 0);
         };
-        basmalaAudio.onerror = () => {
-          // Basmala failed — skip straight to ayah 1
-          playAyahRef.current?.(surahNumber, 1);
-        };
-        basmalaAudio.play().catch(() => {
-          // Autoplay blocked — still proceed to ayah 1 via ref
-          playAyahRef.current?.(surahNumber, 1);
-        });
+        basmalaAudio.onended = () => { setIsPlaying(false); setIsAudioLoading(false); afterBasmala(); };
+        basmalaAudio.onerror = afterBasmala; // on failure, skip straight to ayah 1
+        basmalaAudio.play().catch(afterBasmala);
         return;
       }
+      // Reset guard once we're past the injection point
+      skipBasmalaRef.current = false;
 
       // Tear down current track but NOT the next-ayah preload — we may reuse it
       if (audioRef.current) {

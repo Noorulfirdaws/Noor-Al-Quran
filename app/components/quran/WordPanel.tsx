@@ -104,7 +104,7 @@ export default function WordPanel() {
           <div className="flex-1 min-w-0">
             <div
               className="text-4xl sm:text-5xl leading-loose text-white mb-1.5"
-              style={{ fontFamily: "var(--font-amiri), serif", direction: "rtl" }}
+              style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif", direction: "rtl" }}
             >
               {word.textUthmani}
             </div>
@@ -119,7 +119,7 @@ export default function WordPanel() {
               {word.rootLetters && (
                 <span
                   className="text-[#f7ca45]/70 text-base"
-                  style={{ fontFamily: "var(--font-amiri), serif" }}
+                  style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
                 >
                   ∞ {word.rootLetters}
                 </span>

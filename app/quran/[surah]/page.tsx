@@ -30,9 +30,12 @@ export default function SurahPage({ params }: Props) {
   return (
     <PremiumProvider>
       <QuranReaderProvider>
-        <Navbar />
-        <div className="pt-16">
-          <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} />
+        {/* bg-[#050907] on wrapper prevents white body bleed-through */}
+        <div className="min-h-screen bg-[#050907]">
+          <Navbar />
+          <div className="pt-16">
+            <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} />
+          </div>
         </div>
       </QuranReaderProvider>
     </PremiumProvider>
