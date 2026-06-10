@@ -140,6 +140,54 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
   const playAyah = useCallback(
     (surahNumber: number, ayahNumber: number) => {
+      // ── Basmala injection ─────────────────────────────────────────────────
+      // For surahs other than Al-Fatiha (1) and At-Tawbah (9), play the
+      // Basmala audio (= surah 1 ayah 1 from the same reciter) before ayah 1.
+      if (
+        ayahNumber === 1 &&
+        surahNumber !== 1 &&
+        surahNumber !== 9
+      ) {
+        // Tear down cleanly
+        if (audioRef.current) {
+          const a = audioRef.current;
+          a.onended = null; a.onerror = null; a.onplaying = null;
+          a.onpause = null; a.onwaiting = null;
+          a.pause(); a.src = "";
+          audioRef.current = null;
+        }
+        if (nextAudioRef.current) { nextAudioRef.current.audio.src = ""; nextAudioRef.current = null; }
+
+        const basmalaUrl = getAyahAudioUrl(settingsRef.current.reciterId, 1, 1);
+        const basmalaAudio = new Audio(basmalaUrl);
+        audioRef.current = basmalaAudio;
+
+        setPlayingAyah(0); // 0 = Basmala indicator
+        setIsAudioLoading(true);
+        setIsPlaying(false);
+        setHighlightedAyah(null);
+        setAudioError(null);
+
+        basmalaAudio.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
+        basmalaAudio.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
+        basmalaAudio.onpause = () => { if (!basmalaAudio.ended) { setIsPlaying(false); setIsAudioLoading(false); } };
+        basmalaAudio.onended = () => {
+          setIsPlaying(false);
+          setIsAudioLoading(false);
+          // Now play the actual ayah 1
+          playAyahRef.current?.(surahNumber, 1);
+        };
+        basmalaAudio.onerror = () => {
+          // Basmala failed — skip straight to ayah 1
+          playAyahRef.current?.(surahNumber, 1);
+        };
+        basmalaAudio.play().catch(() => {
+          // Autoplay blocked — still proceed to ayah 1 via ref
+          playAyahRef.current?.(surahNumber, 1);
+        });
+        return;
+      }
+
       // Tear down current track but NOT the next-ayah preload — we may reuse it
       if (audioRef.current) {
         const a = audioRef.current;

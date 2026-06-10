@@ -100,7 +100,8 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     <div className="min-h-screen bg-[#050907] text-white flex flex-col">
 
       {/* ── Compact sticky header (two rows) ────────────────────────────── */}
-      <div className="sticky top-16 z-30 bg-[#050907]/97 backdrop-blur-md border-b border-white/8">
+      {/* bg must be fully opaque so it covers content scrolling underneath  */}
+      <div className="sticky top-16 z-30 bg-[#050907] border-b border-white/8">
 
         {/* Row 1: surah nav + reciter + settings */}
         <div className="max-w-3xl mx-auto px-3 py-2 flex items-center gap-2">
@@ -283,11 +284,11 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
 
         {/* Bismillah header — shown for all surahs except 1 and 9 */}
         {!loadingAyahs && ayahs.length > 0 && surahNumber !== 1 && surahNumber !== 9 && (
-          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-5 text-center border-b border-white/5">
-            <p className="text-3xl sm:text-4xl leading-loose text-white/75" style={{ fontFamily: "var(--font-amiri), serif", direction: "rtl" }}>
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 pt-6 pb-3 text-center border-b border-white/5">
+            <p className="text-2xl sm:text-3xl leading-relaxed text-white/70" style={{ fontFamily: "var(--font-amiri), serif", direction: "rtl" }}>
               بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
             </p>
-            <p className="text-white/20 text-xs mt-0.5 italic">Bismillāhi r-raḥmāni r-raḥīm</p>
+            <p className="text-white/20 text-[10px] mt-0.5 italic">Bismillāhi r-raḥmāni r-raḥīm</p>
           </div>
         )}
 

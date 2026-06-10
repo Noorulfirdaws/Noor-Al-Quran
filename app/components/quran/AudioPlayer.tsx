@@ -20,7 +20,9 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
   // Show whenever a playback session is active (loading, playing, or paused on an ayah)
   if (!isAudioLoading && !isPlaying && playingAyah === null) return null;
 
-  const currentAyah = playingAyah ?? 1;
+  // playingAyah === 0 means Basmala is playing before ayah 1
+  const isBasmala = playingAyah === 0;
+  const currentAyah = isBasmala ? 1 : (playingAyah ?? 1);
 
   const handlePrev = () => { if (currentAyah > 1) playAyah(surahNumber, currentAyah - 1); };
   const handleNext = () => { if (currentAyah < totalAyahs) playAyah(surahNumber, currentAyah + 1); };
@@ -46,10 +48,10 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           ) : (
             <>
               <div className="text-white/40 text-[10px] uppercase tracking-widest">
-                {isAudioLoading ? "Loading…" : "Playing"}
+                {isAudioLoading ? "Loading…" : isBasmala ? "Bismillah" : "Playing"}
               </div>
               <div className="text-white text-sm font-bold truncate">
-                Ayah {currentAyah} · {reciter.name}
+                {isBasmala ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ" : `Ayah ${currentAyah} · ${reciter.name}`}
               </div>
             </>
           )}

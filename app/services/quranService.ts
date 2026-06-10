@@ -3,6 +3,8 @@ import type { SurahMeta, AyahData, AyahWithWords, WordData } from "../types/qura
 // ─── Cache helpers ───────────────────────────────────────────────────────────
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Bump this string to invalidate all qs: cached data (e.g. after Bismillah-strip fix)
+const CACHE_VERSION = "v2";
 
 function cacheSet(key: string, value: unknown): void {
   try {
@@ -57,12 +59,12 @@ async function fetchWithFallback<T>(proxyPath: string, directPath: string): Prom
 // ─── Surah List ──────────────────────────────────────────────────────────────
 
 export async function getSurahList(): Promise<SurahMeta[]> {
-  const cached = cacheGet<SurahMeta[]>("qs:surah-list");
+  const cached = cacheGet<SurahMeta[]>(`qs:${CACHE_VERSION}:surah-list`);
   if (cached) return cached;
 
   const json = await fetchWithFallback<{ data: SurahMeta[] }>("/surah", "/surah");
   const list = json.data;
-  cacheSet("qs:surah-list", list);
+  cacheSet(`qs:${CACHE_VERSION}:surah-list`, list);
   return list;
 }
 
@@ -74,7 +76,7 @@ export interface SurahResult {
 }
 
 export async function getSurah(surahNumber: number): Promise<SurahResult> {
-  const cacheKey = `qs:surah-${surahNumber}`;
+  const cacheKey = `qs:${CACHE_VERSION}:surah-${surahNumber}`;
   const cached = cacheGet<SurahResult>(cacheKey);
   if (cached) return cached;
 
@@ -118,16 +120,53 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
   // The quran-uthmani edition prepends Bismillah to the first ayah text for
   // all surahs except Al-Fatiha (1) and At-Tawbah (9). Since SurahReader
   // renders a separate Bismillah header, we strip it from the ayah text to
-  // avoid duplication. The regex matches the Uthmani Bismillah with any
-  // combination of Unicode diacritics / alternative characters.
-  const BISMILLAH_RE =
-    /^(بِسْمِ\s*ٱللَّهِ\s*ٱلرَّحْمَٰنِ\s*ٱلرَّحِيمِ|بِسْمِ\s*اللَّهِ\s*الرَّحْمَنِ\s*الرَّحِيمِ)\s*/u;
+  // avoid duplication.
+  //
+  // We normalise by stripping Arabic diacritics (Tashkeel, Tatweel, etc.)
+  // before pattern-matching so we're robust to any Unicode variation the API
+  // may use (ٱ vs ا, full Uthmani diacritics vs simplified, etc.).
+  const DIACRITIC_RE = /[ؐ-ًؚ-ٰٟۖ-ۜ۟-۪ۤۧۨ-ۭـ]/g;
+  // Normalise alif-wasla (ٱ U+0671) → alif (ا U+0627) for matching
+  const normChar = (s: string) => s.replace(/ٱ/g, "ا").replace(DIACRITIC_RE, "");
+  // Base consonants of Bismillah without diacritics: بسم الله الرحمن الرحيم
+  const BASMALA_PLAIN = "بسم الله الرحمن الرحيم";
+
+  function stripBasmala(text: string): string {
+    const plain = normChar(text);
+    if (!plain.startsWith("بسم")) return text; // fast early exit
+    // Find where رحيم ends in the plain version (last 4 chars of Basmala)
+    const rahimEnd = plain.indexOf("رحيم");
+    if (rahimEnd === -1 || rahimEnd > BASMALA_PLAIN.length + 5) return text;
+    // Map plain-text end position back to original text by counting base chars
+    const targetPlainLen = rahimEnd + 4; // رحيم = 4 base chars
+    let origIdx = 0, plainCount = 0;
+    while (origIdx < text.length && plainCount < targetPlainLen) {
+      const cp = text.codePointAt(origIdx) ?? 0;
+      const isDiacritic =
+        (cp >= 0x0610 && cp <= 0x061A) ||
+        (cp >= 0x064B && cp <= 0x065F) ||
+        cp === 0x0640 || cp === 0x0670 ||
+        (cp >= 0x06D6 && cp <= 0x06ED);
+      if (!isDiacritic) plainCount++;
+      origIdx += cp > 0xFFFF ? 2 : 1;
+    }
+    // Advance past any trailing diacritics/spaces after رحيم
+    while (origIdx < text.length) {
+      const cp = text.codePointAt(origIdx) ?? 0;
+      if (cp !== 0x0020 && cp !== 0x00A0 && // spaces
+          !((cp >= 0x0610 && cp <= 0x061A) || (cp >= 0x064B && cp <= 0x065F) ||
+            cp === 0x0670 || (cp >= 0x06D6 && cp <= 0x06ED))) break;
+      origIdx++;
+    }
+    return text.slice(origIdx);
+  }
+
   const needsStrip = meta.number !== 1 && meta.number !== 9;
 
   const ayahs: AyahData[] = arabic.ayahs.map((a, i) => {
     let text = a.text;
     if (needsStrip && a.numberInSurah === 1) {
-      text = text.replace(BISMILLAH_RE, "").trimStart();
+      text = stripBasmala(text);
     }
     return {
       number: a.number,
@@ -164,7 +203,7 @@ interface QuranComVerse {
 }
 
 export async function getWordsForSurah(surahNumber: number): Promise<AyahWithWords[]> {
-  const cacheKey = `qs:words-${surahNumber}`;
+  const cacheKey = `qs:${CACHE_VERSION}:words-${surahNumber}`;
   const cached = cacheGet<AyahWithWords[]>(cacheKey);
   if (cached) return cached;
 
