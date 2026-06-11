@@ -1,17 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
-type SpeechRecognition = any;
-type SpeechRecognitionEvent = any;
-type SpeechRecognitionErrorEvent = any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 import { Mic, MicOff, RotateCcw, ChevronDown, Zap } from "lucide-react";
 
 /* ─── Bismillah ─── */
@@ -43,27 +32,11 @@ interface AyahData {
   tr: string;
 }
 
-/* ─── Helpers ─── */
-type WordStatus = "idle" | "current" | "correct" | "incorrect" | "skipped";
-
-function normalizeArabic(s: string): string {
-  return s
-    .replace(/[ً-ٰٟۖ-ۜ۟-۪ۤۧۨ-ۭ]/g, "")   // strip diacritics
-    .replace(/[ٱ]/g, "ا")                     // alef wasla → alef
-    .replace(/[أإآ]/g, "ا")                   // other alef variants → alef
-    .replace(/ة/g, "ه")                        // ta marbuta → ha
-    .replace(/[ىی]/g, "ي")                    // ya variants → ya
-    .replace(/[^؀-ۿ\s]/g, "")       // remove non-Arabic
-    .trim();
-}
-
-function wordsOf(text: string) {
-  return text.split(/\s+/).filter(Boolean);
-}
-
-function compareWord(expected: string, spoken: string): boolean {
-  return normalizeArabic(expected) === normalizeArabic(spoken);
-}
+/* ─── Helpers — powered by reciteService ─── */
+import {
+  type WordStatus, compareWord, splitWords as wordsOf,
+  isSpeechSupported, createRecognition, type RecognitionHandle,
+} from "../services/reciteService";
 
 /* ─── Main component ─── */
 export default function AIRecitationDemo() {
@@ -82,7 +55,9 @@ export default function AIRecitationDemo() {
   const [done, setDone] = useState(false);
   const [showTransliteration, setShowTransliteration] = useState(true);
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<RecognitionHandle | null>(null);
+  const wordCursorRef = useRef(0);
+  const wordStatusesRef = useRef<WordStatus[]>([]);
 
   /* Fetch surah list on mount — proxy first, AlQuran Cloud direct fallback */
   useEffect(() => {
@@ -184,6 +159,8 @@ export default function AIRecitationDemo() {
       recognitionRef.current.abort();
       recognitionRef.current = null;
     }
+    wordCursorRef.current = 0;
+    wordStatusesRef.current = [];
     setListening(false);
     setTranscript("");
     setInterimTranscript("");
@@ -196,87 +173,82 @@ export default function AIRecitationDemo() {
   useEffect(() => { reset(); }, [surahIdx, reset]);
 
   useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) setSupported(false);
+    if (!isSpeechSupported()) setSupported(false);
   }, []);
 
   const startListening = useCallback(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!isSpeechSupported()) return;
 
-    const recognition = new SR() as SpeechRecognition;
-    recognition.lang = "ar-SA";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
+    // Sync refs to latest state before starting
+    wordCursorRef.current = currentWordIdx;
+    wordStatusesRef.current = [...wordStatuses];
 
-    let wordCursor = currentWordIdx;
-    let finalText = transcript;
+    const handle = createRecognition({
+      onStart: () => setListening(true),
+      onEnd: () => {
+        setListening(false);
+        setInterimTranscript("");
+      },
+      onInterimResult: (t) => setInterimTranscript(t),
+      onFinalResult: (primary, alternatives) => {
+        const cursor = wordCursorRef.current;
+        const statuses = [...wordStatusesRef.current];
 
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => {
-      setListening(false);
-      setInterimTranscript("");
-    };
+        if (cursor >= allWords.length) return;
 
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const result = e.results[i];
-        if (result.isFinal) {
-          const spoken = result[0].transcript.trim();
-          finalText += " " + spoken;
-          setTranscript(finalText);
+        setTranscript((prev) => (prev + " " + primary).trim());
 
-          const spokenWords = wordsOf(spoken);
-          const newStatuses = [...wordStatuses];
+        // Try each alternative; match against cursor and up to 3 words ahead
+        const expected = allWords[cursor];
+        const matched = alternatives.some((alt) =>
+          wordsOf(alt).some((sw) => compareWord(expected, sw))
+        );
 
-          for (const sw of spokenWords) {
-            if (wordCursor >= allWords.length) break;
-
-            let matched = false;
-            for (let lookahead = 0; lookahead < 3 && wordCursor + lookahead < allWords.length; lookahead++) {
-              if (compareWord(allWords[wordCursor + lookahead], sw)) {
-                for (let s = 0; s < lookahead; s++) {
-                  newStatuses[wordCursor + s] = "skipped";
-                }
-                newStatuses[wordCursor + lookahead] = "correct";
-                wordCursor = wordCursor + lookahead + 1;
-                matched = true;
-                break;
-              }
-            }
-            if (!matched) {
-              newStatuses[wordCursor] = "incorrect";
-              wordCursor++;
-            }
-          }
-
-          setWordStatuses([...newStatuses]);
-          setCurrentWordIdx(wordCursor);
-
-          if (wordCursor >= allWords.length) {
-            setDone(true);
-            recognition.stop();
-          }
+        if (matched) {
+          statuses[cursor] = "correct";
+          wordCursorRef.current = cursor + 1;
         } else {
-          interim += result[0].transcript;
+          // Look ahead up to 3 words for a skip
+          let skipTo = -1;
+          for (let look = cursor + 1; look < Math.min(cursor + 4, allWords.length); look++) {
+            if (alternatives.some((alt) =>
+              wordsOf(alt).some((sw) => compareWord(allWords[look], sw))
+            )) { skipTo = look; break; }
+          }
+          if (skipTo >= 0) {
+            for (let k = cursor; k < skipTo; k++) statuses[k] = "skipped";
+            statuses[skipTo] = "correct";
+            wordCursorRef.current = skipTo + 1;
+          } else {
+            statuses[cursor] = "incorrect";
+            wordCursorRef.current = cursor + 1;
+          }
         }
-      }
-      setInterimTranscript(interim);
-    };
 
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
-      if (e.error !== "aborted") setListening(false);
-    };
+        wordStatusesRef.current = statuses;
+        setWordStatuses([...statuses]);
+        setCurrentWordIdx(wordCursorRef.current);
 
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, [allWords, currentWordIdx, transcript, wordStatuses]);
+        if (wordCursorRef.current >= allWords.length) {
+          setDone(true);
+          handle.stop();
+        }
+      },
+      onError: (err) => {
+        if (err !== "aborted" && err !== "no-speech") setListening(false);
+      },
+    }, true /* autoRestart */);
+
+    recognitionRef.current = handle;
+    handle.start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allWords, currentWordIdx, wordStatuses]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setListening(false);
+    setInterimTranscript("");
   }, []);
 
   const toggleMic = () => {
@@ -444,9 +416,8 @@ export default function AIRecitationDemo() {
                         <p className="text-3xl sm:text-4xl leading-loose font-arabic tracking-wide text-right">
                           {ayahWords.map((word, wi) => {
                             const globalIdx = offset + wi;
-                            const status: WordStatus = wordStatuses[globalIdx] ?? (
-                              globalIdx === currentWordIdx && listening ? "current" : "idle"
-                            );
+                            const status: WordStatus = wordStatuses[globalIdx] ??
+                              (globalIdx === currentWordIdx ? "current" : "idle");
                             return (
                               <span
                                 key={wi}

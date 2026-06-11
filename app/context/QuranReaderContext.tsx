@@ -9,6 +9,10 @@ import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
 import { getAyahAudioUrl } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
+import {
+  type WordStatus, normalizeArabic, compareWord, splitWords,
+  isSpeechSupported, createRecognition, type RecognitionHandle,
+} from "../services/reciteService";
 
 const SETTINGS_KEY = "noor:reader-settings";
 
@@ -56,6 +60,18 @@ interface ReaderCtx {
   revealWord: (ayah: number, position: number) => void;
   revealAll: () => void;
   hideAll: () => void;
+
+  // ── AI Recitation Correction ──────────────────────────────────────────────
+  speechSupported: boolean;
+  isReciting: boolean;
+  reciteWordStatuses: WordStatus[];   // flat array, one per word across whole surah
+  reciteWordCursor: number;
+  reciteDone: boolean;
+  reciteInterim: string;
+  reciteStats: { correct: number; incorrect: number; skipped: number; accuracy: number };
+  startReciting: () => void;
+  stopReciting: () => void;
+  resetRecite: () => void;
 }
 
 const Ctx = createContext<ReaderCtx | null>(null);
@@ -76,6 +92,186 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null);
   const [highlightedAyah, setHighlightedAyah] = useState<number | null>(null);
   const [revealedWords, setRevealedWords] = useState<Set<string>>(new Set());
+
+  // ── AI Recitation state ───────────────────────────────────────────────────
+  // Start false on both server and client to avoid hydration mismatch,
+  // then update on the client after mount.
+  const [speechSupported, setSpeechSupported] = useState(false);
+  useEffect(() => { setSpeechSupported(isSpeechSupported()); }, []);
+  const [isReciting, setIsReciting] = useState(false);
+  const [reciteWordStatuses, setReciteWordStatuses] = useState<WordStatus[]>([]);
+  const [reciteWordCursor, setReciteWordCursor] = useState(0);
+  const [reciteDone, setReciteDone] = useState(false);
+  const [reciteInterim, setReciteInterim] = useState("");
+  const [reciteStats, setReciteStats] = useState({
+    correct: 0, incorrect: 0, skipped: 0, accuracy: 0,
+  });
+  const reciteHandleRef = useRef<RecognitionHandle | null>(null);
+  // Flat array of all words across the currently loaded surah (for matching)
+  const reciteWordsRef = useRef<string[]>([]);
+  // Keep cursor in a ref so recognition callbacks always see the latest value
+  const reciteCursorRef = useRef(0);
+  const reciteStatusesRef = useRef<WordStatus[]>([]);
+  const reciteStatsRef = useRef({ correct: 0, incorrect: 0, skipped: 0, accuracy: 0 });
+
+  // ── Recite helpers ────────────────────────────────────────────────────────
+
+  const recalcStats = (statuses: WordStatus[]) => {
+    const correct = statuses.filter((s) => s === "correct").length;
+    const incorrect = statuses.filter((s) => s === "incorrect").length;
+    const skipped = statuses.filter((s) => s === "skipped").length;
+    const total = correct + incorrect + skipped;
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+    return { correct, incorrect, skipped, accuracy };
+  };
+
+  const advanceCursor = useCallback((
+    newStatuses: WordStatus[],
+    nextCursor: number,
+  ) => {
+    const marked = [...newStatuses];
+    // Mark the next word as "current" if we're not done
+    if (nextCursor < marked.length && marked[nextCursor] === "idle") {
+      marked[nextCursor] = "current";
+    }
+    reciteStatusesRef.current = marked;
+    reciteCursorRef.current = nextCursor;
+    setReciteWordStatuses(marked);
+    setReciteWordCursor(nextCursor);
+    const stats = recalcStats(marked);
+    reciteStatsRef.current = stats;
+    setReciteStats(stats);
+  }, []);
+
+  const startReciting = useCallback(() => {
+    if (!isSpeechSupported()) return;
+    // Build flat word list from ayahsWithWords if available, else from ayahs text
+    let words: string[] = [];
+    if (reciteStatusesRef.current.length > 0 && reciteWordsRef.current.length > 0) {
+      // Already have words — just resume
+    } else {
+      const hasWordData = ayahsWithWords.length > 0;
+      if (hasWordData) {
+        ayahsWithWords.forEach((a) => {
+          a.words.forEach((w) => words.push(w.textUthmani));
+        });
+      } else {
+        ayahs.forEach((a) => {
+          splitWords(a.text).forEach((w) => words.push(w));
+        });
+      }
+      reciteWordsRef.current = words;
+      // Initialise statuses: first word = "current", rest = "idle"
+      const initialStatuses: WordStatus[] = words.map((_, i) =>
+        i === 0 ? "current" : "idle"
+      );
+      reciteStatusesRef.current = initialStatuses;
+      reciteCursorRef.current = 0;
+      reciteStatsRef.current = { correct: 0, incorrect: 0, skipped: 0, accuracy: 0 };
+      setReciteWordStatuses(initialStatuses);
+      setReciteWordCursor(0);
+      setReciteStats({ correct: 0, incorrect: 0, skipped: 0, accuracy: 0 });
+      setReciteDone(false);
+      setReciteInterim("");
+    }
+
+    setIsReciting(true);
+
+    const handle = createRecognition({
+      onInterimResult: (transcript) => {
+        setReciteInterim(transcript);
+      },
+      onFinalResult: (_primary, alternatives) => {
+        setReciteInterim("");
+        const cursor = reciteCursorRef.current;
+        const allWords = reciteWordsRef.current;
+        const statuses = [...reciteStatusesRef.current];
+
+        if (cursor >= allWords.length) return;
+
+        const expected = allWords[cursor];
+
+        // Try to match against all spoken alternatives
+        const matched = alternatives.some((alt) =>
+          splitWords(alt).some((spokenWord) => compareWord(expected, spokenWord))
+        );
+
+        if (matched) {
+          statuses[cursor] = "correct";
+        } else {
+          // Look ahead: if the spoken word matches a word further on, skip intervening
+          let skipTo = -1;
+          for (let look = cursor + 1; look < Math.min(cursor + 4, allWords.length); look++) {
+            if (alternatives.some((alt) =>
+              splitWords(alt).some((sw) => compareWord(allWords[look], sw))
+            )) {
+              skipTo = look;
+              break;
+            }
+          }
+          if (skipTo >= 0) {
+            // Mark skipped
+            for (let k = cursor; k < skipTo; k++) statuses[k] = "skipped";
+            statuses[skipTo] = "correct";
+            advanceCursor(statuses, skipTo + 1);
+            if (skipTo + 1 >= allWords.length) {
+              setReciteDone(true);
+              setIsReciting(false);
+              reciteHandleRef.current?.stop();
+            }
+            return;
+          } else {
+            statuses[cursor] = "incorrect";
+          }
+        }
+
+        const next = cursor + 1;
+        advanceCursor(statuses, next);
+        if (next >= allWords.length) {
+          setReciteDone(true);
+          setIsReciting(false);
+          reciteHandleRef.current?.stop();
+        }
+      },
+      onEnd: () => {
+        setIsReciting(false);
+      },
+      onError: (err) => {
+        if (err !== "not-supported") console.warn("[recite]", err);
+        setIsReciting(false);
+      },
+    }, true /* autoRestart */);
+
+    reciteHandleRef.current = handle;
+    handle.start();
+  }, [ayahs, ayahsWithWords, advanceCursor]);
+
+  const stopReciting = useCallback(() => {
+    reciteHandleRef.current?.stop();
+    reciteHandleRef.current = null;
+    setIsReciting(false);
+    setReciteInterim("");
+  }, []);
+
+  const resetRecite = useCallback(() => {
+    stopReciting();
+    reciteWordsRef.current = [];
+    reciteStatusesRef.current = [];
+    reciteCursorRef.current = 0;
+    reciteStatsRef.current = { correct: 0, incorrect: 0, skipped: 0, accuracy: 0 };
+    setReciteWordStatuses([]);
+    setReciteWordCursor(0);
+    setReciteStats({ correct: 0, incorrect: 0, skipped: 0, accuracy: 0 });
+    setReciteDone(false);
+    setReciteInterim("");
+  }, [stopReciting]);
+
+  // Reset recite state when surah changes
+  const ayahsKey = ayahs.map((a) => a.numberInSurah).join(",");
+  useEffect(() => {
+    resetRecite();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ayahsKey]);
 
   // One persistent audio element — created once on client, reused for all playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -349,6 +545,9 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       selectedWord, setSelectedWord,
       highlightedAyah, setHighlightedAyah,
       revealedWords, revealWord, revealAll, hideAll,
+      speechSupported, isReciting, reciteWordStatuses, reciteWordCursor,
+      reciteDone, reciteInterim, reciteStats,
+      startReciting, stopReciting, resetRecite,
     }}>
       {children}
     </Ctx.Provider>

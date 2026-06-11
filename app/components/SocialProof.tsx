@@ -164,13 +164,12 @@ export default function SocialProof() {
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-all" />
 
                 {/* Centre content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="w-20 h-20 rounded-full bg-[#57d996] flex items-center justify-center shadow-2xl shadow-[#57d996]/50 group-hover:scale-110 transition-transform">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </div>
-                  <p className="text-white/80 text-sm font-semibold tracking-wide">Benefits of Quran for Rizq & Wellbeing</p>
                 </div>
 
                 {/* Corner badge */}

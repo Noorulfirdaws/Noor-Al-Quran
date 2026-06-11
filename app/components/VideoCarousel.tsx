@@ -7,40 +7,45 @@ const podcastEpisodes = [
     id: 1,
     date: "01.10.2025",
     title: "The REAL Reason You Struggle With The Quran | Qari Yahya Ali | re:Verses Episode 52 Part 2",
-    gradient: "from-emerald-700 via-green-800 to-slate-900",
     label: "BEYOND\nMEMORIZATION",
+    // Man reading Arabic book — Unsplash free
+    photo: "https://images.unsplash.com/photo-1573483883644-d0b4b55eb25d?w=640&q=80&fit=crop",
     youtubeId: "rAKLiE3opKU",
   },
   {
     id: 2,
     date: "21.09.2025",
     title: "I Wanted to Quit the Quran... Then Allah Showed Me This | Qari Yahya Ali | re:Verses Episode 52 Part 1",
-    gradient: "from-slate-700 via-blue-900 to-slate-900",
-    label: "Quran\ngot me\nOxford",
+    label: "NEVER\nGIVE UP",
+    // Intricate Arabic calligraphy mosque dome — Unsplash free
+    photo: "https://images.unsplash.com/photo-1761639935382-43452f278898?w=640&q=80&fit=crop",
     youtubeId: "rAKLiE3opKU",
   },
   {
     id: 3,
     date: "25.07.2025",
     title: "Quran Revision Burnout? Try This 20-Minute Protocol | Qari Younus Rahman | re:Verses Episode 51",
-    gradient: "from-slate-800 via-slate-900 to-black",
     label: "1 JUZ IN\n20\nMINUTES?!",
+    // Person at desk studying under lamp at night — Unsplash free
+    photo: "https://images.unsplash.com/photo-1639300505533-9921527d6a50?w=640&q=80&fit=crop",
     youtubeId: "rAKLiE3opKU",
   },
   {
     id: 4,
     date: "15.06.2025",
     title: "The Science of Memorization: What Brain Research Tells Us About Hifz | re:Verses Episode 50",
-    gradient: "from-indigo-800 via-purple-900 to-slate-900",
     label: "SCIENCE\nOF\nHIFZ",
+    // Iridescent glowing brain science render — Unsplash free
+    photo: "https://images.unsplash.com/photo-1617791160536-598cf32026fb?w=640&q=80&fit=crop",
     youtubeId: "rAKLiE3opKU",
   },
   {
     id: 5,
     date: "03.05.2025",
     title: "From Zero to Hafiz at 40: One Man's Journey | re:Verses Episode 49",
-    gradient: "from-teal-700 via-cyan-900 to-slate-900",
     label: "HAFIZ\nAT 40",
+    // Man reading in library — Unsplash free
+    photo: "https://images.unsplash.com/photo-1573142143200-2a6d95ae7352?w=640&q=80&fit=crop",
     youtubeId: "rAKLiE3opKU",
   },
 ];
@@ -79,33 +84,24 @@ export default function VideoCarousel() {
               >
                 {/* Thumbnail */}
                 <div className="relative rounded-2xl overflow-hidden mb-3 shadow-md" style={{ aspectRatio: "16/10" }}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${ep.gradient}`} />
-
-                  {/* YouTube thumbnail */}
+                  {/* Background photo */}
                   <img
-                    src={`https://img.youtube.com/vi/${ep.youtubeId}/mqdefault.jpg`}
+                    src={ep.photo}
                     alt={ep.title}
-                    className="absolute inset-0 w-full h-full object-cover opacity-40"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
 
-                  {/* Text overlay */}
-                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                    <div className="w-6 h-6">
-                      <svg viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="14" stroke="white" strokeWidth="1.5" opacity="0.3" />
-                        <path d="M16 4 C10 4 5 9 5 16 C5 23 10 28 16 28 C12 25 9 20 9 16 C9 12 12 7 16 4Z" fill="white" opacity="0.8" />
-                        <circle cx="22" cy="8" r="2" fill="#f7ca45" />
-                      </svg>
-                    </div>
-                    <p className="text-white font-black text-xl leading-tight whitespace-pre-line drop-shadow-lg">
+                  {/* Dark gradient overlay for readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+
+                  {/* Label text — bottom left */}
+                  <div className="absolute bottom-0 left-0 p-4">
+                    <p className="text-white font-black text-lg leading-tight whitespace-pre-line drop-shadow-lg">
                       {ep.label}
                     </p>
                   </div>
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
-
-                  {/* Play button — always visible, grows on hover */}
+                  {/* Play button — centre */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/40 flex items-center justify-center group-hover:bg-[#57d996] group-hover:border-[#57d996] group-hover:scale-110 transition-all duration-200 shadow-lg">
                       <Play size={18} className="text-white fill-white ml-0.5" />

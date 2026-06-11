@@ -97,7 +97,7 @@ export interface ReadingProgress {
 
 // ─── Reader Mode ─────────────────────────────────────────────────────────────
 
-export type ReaderMode = "reading" | "word-by-word" | "memorization";
+export type ReaderMode = "reading" | "word-by-word" | "memorization" | "recite";
 
 // ─── Premium ─────────────────────────────────────────────────────────────────
 

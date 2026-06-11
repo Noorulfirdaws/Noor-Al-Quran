@@ -10,46 +10,36 @@ const blogPosts = [
     slug: "ramadan-memorization-plan",
     date: "18.02.2026",
     title: "Your 30-Day Ramadan Memorization Plan",
-    gradient: "from-black via-slate-900 to-black",
-    labelTop: "A series by",
-    labelMain: "wahy.",
-    labelColor: "#c9a84c",
+    // Ramadan golden lanterns warm glow — Unsplash free
+    photo: "https://images.unsplash.com/photo-1577214407836-1f3a0604ecb2?w=640&q=80&fit=crop",
+    label: "30-DAY\nPLAN",
   },
   {
     id: 2,
     slug: "memorize-quran-as-adult",
     date: "14.02.2026",
     title: "Starting Hifz as an Adult: What Nobody Tells You",
-    gradient: "from-emerald-800 via-teal-900 to-slate-900",
-    labelTop: "",
-    labelMain: "",
-    labelColor: "#57d996",
-    isPhoto: true,
-    photoGradient: "from-teal-600 to-emerald-800",
+    // Man reading in library — Unsplash free
+    photo: "https://images.unsplash.com/photo-1522211988038-6fcbb8c12c7e?w=640&q=80&fit=crop",
+    label: "ADULT\nHIFZ",
   },
   {
     id: 3,
     slug: "quran-rendering-digital-age",
     date: "07.01.2026",
     title: "From Page to Screen: Rethinking Quran Rendering for the Digital Age",
-    gradient: "from-slate-700 via-slate-800 to-slate-900",
-    labelTop: "",
-    labelMain: "",
-    labelColor: "#18c8d8",
-    isPhoto: true,
-    photoGradient: "from-cyan-800 to-slate-900",
+    // Laptop screen digital workspace — Unsplash free
+    photo: "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=640&q=80&fit=crop",
+    label: "DIGITAL\nAGE",
   },
   {
     id: 4,
     slug: "how-to-memorize-quran",
     date: "12.12.2025",
     title: "How to Memorize The Quran",
-    gradient: "from-green-700 via-emerald-800 to-teal-900",
-    labelTop: "",
-    labelMain: "Q",
-    labelColor: "#57d996",
-    isPhoto: true,
-    photoGradient: "from-green-600 to-emerald-900",
+    // Open Quran book — Unsplash free
+    photo: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=640&q=80&fit=crop",
+    label: "HOW TO\nMEMORIZE",
   },
 ];
 
@@ -89,50 +79,25 @@ export default function BlogSection() {
                 className="relative rounded-2xl overflow-hidden mb-3 shadow-md"
                 style={{ aspectRatio: "16/10" }}
               >
-                {/* Background */}
-                {post.isPhoto ? (
-                  <div className={`absolute inset-0 bg-gradient-to-br ${post.photoGradient}`}>
-                    {/* Decorative Quran/book icon */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                      <div className="w-16 h-20 border-4 border-white rounded-lg flex items-center justify-center">
-                        <span className="text-white text-2xl font-bold">{post.labelMain || "Q"}</span>
-                      </div>
-                    </div>
-                    {/* Children studying silhouettes */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-3">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="w-8 h-10 rounded-t-full bg-black/30" />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`absolute inset-0 bg-gradient-to-br ${post.gradient}`}>
-                    {/* Wahy-style text overlay */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-4">
-                      {post.labelTop && (
-                        <span className="text-white/60 text-[10px] tracking-widest font-light">
-                          {post.labelTop}
-                        </span>
-                      )}
-                      {post.labelMain && (
-                        <span
-                          className="font-black text-5xl italic"
-                          style={{ color: post.labelColor, fontFamily: "Georgia, serif" }}
-                        >
-                          {post.labelMain}
-                        </span>
-                      )}
-                      {/* Small NOOR-UL-QURAN badge */}
-                      <span className="text-white/40 text-[8px] tracking-[0.3em] mt-1 uppercase">
-                        Noor-ul-Quran
-                      </span>
-                    </div>
-                  </div>
-                )}
+                {/* Photo */}
+                <img
+                  src={post.photo}
+                  alt={post.title}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+
+                {/* Dark gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
+
+                {/* Label — bottom left */}
+                <div className="absolute bottom-0 left-0 p-4">
+                  <p className="text-white font-black text-base leading-tight whitespace-pre-line drop-shadow-lg">
+                    {post.label}
+                  </p>
+                </div>
 
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all" />
               </div>
 
               {/* Date + title */}

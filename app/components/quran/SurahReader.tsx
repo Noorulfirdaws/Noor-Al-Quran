@@ -26,6 +26,8 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     surahMeta, ayahs, ayahsWithWords, loadingAyahs, loadingWords, errorMsg,
     loadSurah, loadWords, mode, setMode,
     highlightedAyah, setSelectedWord, settings, updateSettings,
+    speechSupported, isReciting, reciteWordStatuses, reciteWordCursor,
+    reciteDone, reciteInterim, reciteStats, startReciting, stopReciting, resetRecite,
   } = useQuranReader();
   const { isFeatureAllowed } = usePremium();
 
@@ -83,9 +85,29 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
 
   const modeButtons: { id: ReaderMode; label: string; icon: React.ReactNode; feature?: "word-by-word" | "memorization" }[] = [
     { id: "reading", label: "Read", icon: <BookOpen size={13} /> },
-    { id: "word-by-word", label: "Word", icon: <Mic size={13} />, feature: "word-by-word" },
+    { id: "word-by-word", label: "Word", icon: <Brain size={13} />, feature: "word-by-word" },
     { id: "memorization", label: "Memorize", icon: <Brain size={13} />, feature: "memorization" },
+    ...(speechSupported ? [{ id: "recite" as ReaderMode, label: "Recite", icon: <Mic size={13} /> }] : []),
   ];
+
+  // Pre-compute per-ayah word offsets into the flat reciteWordStatuses array
+  const reciteOffsets = useCallback((): Map<number, number> => {
+    const map = new Map<number, number>();
+    let offset = 0;
+    const hasWordData = ayahsWithWords.length > 0;
+    ayahs.forEach((a) => {
+      map.set(a.numberInSurah, offset);
+      if (hasWordData) {
+        const aw = ayahsWithWords.find((x) => x.numberInSurah === a.numberInSurah);
+        offset += aw ? aw.words.length : a.text.split(/\s+/).filter(Boolean).length;
+      } else {
+        offset += a.text.split(/\s+/).filter(Boolean).length;
+      }
+    });
+    return map;
+  }, [ayahs, ayahsWithWords]);
+
+  const ayahWordOffsets = mode === "recite" ? reciteOffsets() : new Map<number, number>();
 
   const handleModeChange = useCallback((m: ReaderMode, feature?: "word-by-word" | "memorization") => {
     if (feature && !isFeatureAllowed(feature, surahNumber)) return;
@@ -241,6 +263,67 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
         <MemorizationPanel totalAyahs={surahMeta.numberOfAyahs} />
       )}
 
+      {/* ── Recite toolbar ── */}
+      {mode === "recite" && (
+        <div className="sticky top-[calc(4rem+6rem)] z-20 bg-[#050f09]/95 backdrop-blur border-b border-[#57d996]/15 px-4 py-2.5">
+          <div className="max-w-3xl mx-auto flex items-center gap-3 flex-wrap">
+            {/* Mic button */}
+            {!reciteDone && (
+              <button
+                onClick={isReciting ? stopReciting : startReciting}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  isReciting
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse"
+                    : "bg-[#57d996]/15 text-[#57d996] border border-[#57d996]/30 hover:bg-[#57d996]/25"
+                }`}
+              >
+                <Mic size={14} className={isReciting ? "animate-pulse" : ""} />
+                {isReciting ? "Stop" : "Start Reciting"}
+              </button>
+            )}
+            {reciteDone && (
+              <button
+                onClick={resetRecite}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-[#57d996]/15 text-[#57d996] border border-[#57d996]/30 hover:bg-[#57d996]/25 transition-all"
+              >
+                ↺ Restart
+              </button>
+            )}
+
+            {/* Stats */}
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="text-green-400">✓ {reciteStats.correct}</span>
+              <span className="text-red-400">✗ {reciteStats.incorrect}</span>
+              <span className="text-yellow-400">↷ {reciteStats.skipped}</span>
+              {(reciteStats.correct + reciteStats.incorrect + reciteStats.skipped) > 0 && (
+                <span className={`font-bold ${reciteStats.accuracy >= 80 ? "text-[#57d996]" : reciteStats.accuracy >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                  {reciteStats.accuracy}%
+                </span>
+              )}
+            </div>
+
+            {/* Word cursor position */}
+            {reciteWordStatuses.length > 0 && (
+              <span className="text-white/25 text-xs ml-auto">
+                {Math.min(reciteWordCursor + 1, reciteWordStatuses.length)} / {reciteWordStatuses.length} words
+              </span>
+            )}
+
+            {/* Done banner */}
+            {reciteDone && (
+              <span className="text-[#57d996] text-sm font-bold">🎉 Surah complete!</span>
+            )}
+          </div>
+
+          {/* Interim speech display */}
+          {reciteInterim && (
+            <div className="max-w-3xl mx-auto mt-1 text-white/40 text-sm italic text-right" dir="rtl">
+              {reciteInterim}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 pb-32">
         {errorMsg && (
@@ -298,6 +381,8 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
             const ayahWithWords = ayahsWithWords.find((a) => a.numberInSurah === ayah.numberInSurah);
             const showWordByWord = mode === "word-by-word" && isFeatureAllowed("word-by-word", surahNumber);
             const showMemorization = mode === "memorization" && isFeatureAllowed("memorization", surahNumber);
+            const showRecite = mode === "recite";
+            const wordOffset = ayahWordOffsets.get(ayah.numberInSurah) ?? 0;
             return (
               <AyahDisplay
                 key={ayah.numberInSurah}
@@ -308,6 +393,10 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
                 isHighlighted={highlightedAyah === ayah.numberInSurah}
                 isWordByWord={showWordByWord}
                 isMemorization={showMemorization}
+                isRecite={showRecite}
+                reciteWordOffset={wordOffset}
+                reciteWordStatuses={reciteWordStatuses}
+                reciteWordCursor={reciteWordCursor}
               />
             );
           })}

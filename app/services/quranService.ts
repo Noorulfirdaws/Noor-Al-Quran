@@ -3,8 +3,8 @@ import type { SurahMeta, AyahData, AyahWithWords, WordData } from "../types/qura
 // ─── Cache helpers ───────────────────────────────────────────────────────────
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
-// Bump this string to invalidate all qs: cached data (e.g. after Bismillah-strip fix)
-const CACHE_VERSION = "v2";
+// Bump this string to invalidate all qs: cached data
+const CACHE_VERSION = "v4";
 
 function cacheSet(key: string, value: unknown): void {
   try {
@@ -33,24 +33,15 @@ function cacheGet<T>(key: string): T | null {
 
 const ALQURAN_BASE = "https://api.alquran.cloud/v1";
 
-/**
- * Try our own API proxy first (server-side, avoids CORS + adds caching).
- * Fall back to AlQuran Cloud directly if the proxy is unavailable.
- * proxyPath  – path relative to /api/quran  (e.g. "/surah", "/surah/1")
- * directPath – path relative to AlQuran Base (e.g. "/surah", "/surah/1/editions/...")
- */
 async function fetchWithFallback<T>(proxyPath: string, directPath: string): Promise<T> {
-  // 1. Proxy attempt
   try {
     const res = await fetch(`/api/quran${proxyPath}`);
     if (res.ok) {
       const json = await res.json();
-      // proxy routes return the upstream JSON as-is; upstream errors have json.error
       if (!json.error) return json as T;
     }
   } catch { /* proxy unavailable */ }
 
-  // 2. Direct fallback
   const res = await fetch(`${ALQURAN_BASE}${directPath}`);
   if (!res.ok) throw new Error(`Failed to load Quran data (HTTP ${res.status})`);
   return res.json() as Promise<T>;
@@ -66,6 +57,39 @@ export async function getSurahList(): Promise<SurahMeta[]> {
   const list = json.data;
   cacheSet(`qs:${CACHE_VERSION}:surah-list`, list);
   return list;
+}
+
+// ─── Basmala strip ───────────────────────────────────────────────────────────
+// The quran-uthmani edition from AlQuran Cloud prepends Bismillah text to
+// ayah 1 of every surah except Al-Fatiha (1, where it IS ayah 1) and
+// At-Tawbah (9, which has no Bismillah).
+// SurahReader renders its own Bismillah header, so we must strip the prepended
+// one from the raw ayah text.
+//
+// Uses a regex built from explicit \uXXXX escapes for the 18 consonants of
+// Bismillah, allowing any number of diacritics between each consonant.
+// This is immune to font/encoding differences in how the API returns the text.
+
+// Arabic diacritic character class (explicit hex — no inline Arabic chars)
+const D = "[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]*";
+
+// Alef + alef-wasla class
+const A = "[\\u0627\\u0671]";
+
+// Regex for full Bismillah: بسم الله الرحمن الرحيم  (with any diacritics)
+// ب=ب س=س م=م ل=ل ه=ه ر=ر ح=ح ن=ن ي=ي
+const BASMALA_RE = new RegExp(
+  `^${D}\\u0628${D}\\u0633${D}\\u0645${D}\\s+` +         // بسم
+  `${A}${D}\\u0644${D}\\u0644${D}\\u0647${D}\\s+` +       // الله
+  `${A}${D}\\u0644${D}\\u0631${D}\\u062D${D}\\u0645${D}\\u0670?${D}\\u0646${D}\\s+` + // الرحمن
+  `${A}${D}\\u0644${D}\\u0631${D}\\u062D${D}\\u064A${D}\\u0645${D}\\s*`              // الرحيم
+);
+
+function stripBasmala(text: string): string {
+  const match = BASMALA_RE.exec(text);
+  if (!match) return text;
+  const stripped = text.slice(match[0].length).trim();
+  return stripped || text; // safety: never return empty
 }
 
 // ─── Surah Data ──────────────────────────────────────────────────────────────
@@ -99,8 +123,6 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
     }[];
   };
 
-  // Proxy path: /api/quran/surah/{id}  (route appends editions internally)
-  // Direct path: full editions URL
   const json = await fetchWithFallback<{ data: AlQuranEdition[] }>(
     `/surah/${surahNumber}`,
     `/surah/${surahNumber}/editions/quran-uthmani,en.transliteration,en.sahih`
@@ -117,50 +139,7 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
     revelationType: arabic.revelationType as "Meccan" | "Medinan",
   };
 
-  // The quran-uthmani edition prepends Bismillah to the first ayah text for
-  // all surahs except Al-Fatiha (1) and At-Tawbah (9). Since SurahReader
-  // renders a separate Bismillah header, we strip it from the ayah text to
-  // avoid duplication.
-  //
-  // We normalise by stripping Arabic diacritics (Tashkeel, Tatweel, etc.)
-  // before pattern-matching so we're robust to any Unicode variation the API
-  // may use (ٱ vs ا, full Uthmani diacritics vs simplified, etc.).
-  const DIACRITIC_RE = /[ؐ-ًؚ-ٰٟۖ-ۜ۟-۪ۤۧۨ-ۭـ]/g;
-  // Normalise alif-wasla (ٱ U+0671) → alif (ا U+0627) for matching
-  const normChar = (s: string) => s.replace(/ٱ/g, "ا").replace(DIACRITIC_RE, "");
-  // Base consonants of Bismillah without diacritics: بسم الله الرحمن الرحيم
-  const BASMALA_PLAIN = "بسم الله الرحمن الرحيم";
-
-  function stripBasmala(text: string): string {
-    const plain = normChar(text);
-    if (!plain.startsWith("بسم")) return text; // fast early exit
-    // Find where رحيم ends in the plain version (last 4 chars of Basmala)
-    const rahimEnd = plain.indexOf("رحيم");
-    if (rahimEnd === -1 || rahimEnd > BASMALA_PLAIN.length + 5) return text;
-    // Map plain-text end position back to original text by counting base chars
-    const targetPlainLen = rahimEnd + 4; // رحيم = 4 base chars
-    let origIdx = 0, plainCount = 0;
-    while (origIdx < text.length && plainCount < targetPlainLen) {
-      const cp = text.codePointAt(origIdx) ?? 0;
-      const isDiacritic =
-        (cp >= 0x0610 && cp <= 0x061A) ||
-        (cp >= 0x064B && cp <= 0x065F) ||
-        cp === 0x0640 || cp === 0x0670 ||
-        (cp >= 0x06D6 && cp <= 0x06ED);
-      if (!isDiacritic) plainCount++;
-      origIdx += cp > 0xFFFF ? 2 : 1;
-    }
-    // Advance past any trailing diacritics/spaces after رحيم
-    while (origIdx < text.length) {
-      const cp = text.codePointAt(origIdx) ?? 0;
-      if (cp !== 0x0020 && cp !== 0x00A0 && // spaces
-          !((cp >= 0x0610 && cp <= 0x061A) || (cp >= 0x064B && cp <= 0x065F) ||
-            cp === 0x0670 || (cp >= 0x06D6 && cp <= 0x06ED))) break;
-      origIdx++;
-    }
-    return text.slice(origIdx);
-  }
-
+  // Strip Bismillah from ayah 1 for all surahs except 1 and 9
   const needsStrip = meta.number !== 1 && meta.number !== 9;
 
   const ayahs: AyahData[] = arabic.ayahs.map((a, i) => {
@@ -207,12 +186,10 @@ export async function getWordsForSurah(surahNumber: number): Promise<AyahWithWor
   const cached = cacheGet<AyahWithWords[]>(cacheKey);
   if (cached) return cached;
 
-  // First get the surah ayahs so we can merge word data
   const { ayahs } = await getSurah(surahNumber);
 
   let verses: QuranComVerse[] = [];
   try {
-    // Try via proxy first
     let res: Response;
     try {
       res = await fetch(`/api/quran/words/${surahNumber}`);
@@ -236,22 +213,44 @@ export async function getWordsForSurah(surahNumber: number): Promise<AyahWithWor
     verseMap[v.verse_number] = v;
   }
 
+  // Bismillah word text in bare consonants (used to filter leading Basmala words
+  // from word-by-word data for surahs that aren't 1 or 9)
+  const BASMALA_WORDS_COUNT = 4; // بسم / الله / الرحمن / الرحيم
+
   const result: AyahWithWords[] = ayahs.map((ayah) => {
     const verse = verseMap[ayah.numberInSurah];
-    const words: WordData[] = (verse?.words ?? [])
-      .filter((w) => w.text_uthmani && w.text_uthmani !== "۝") // skip verse markers
-      .map((w) => ({
-        id: w.id,
-        position: w.position,
-        textUthmani: w.text_uthmani,
-        transliteration: w.transliteration?.text ?? "",
-        translation: w.translation?.text ?? "",
-        audioUrl: w.audio_url
-          ? w.audio_url.startsWith("http")
-            ? w.audio_url
-            : `https://audio.qurancdn.com/${w.audio_url}`
-          : undefined,
-      }));
+    let rawWords = (verse?.words ?? []).filter(
+      (w) => w.text_uthmani && w.text_uthmani !== "۝" && w.text_uthmani !== "۞"
+    );
+
+    // Strip leading Bismillah words from ayah 1 for surahs 2–114 (except 9)
+    // Quran.com word API includes Bismillah as the first 4 words of ayah 1
+    if (
+      ayah.numberInSurah === 1 &&
+      surahNumber !== 1 &&
+      surahNumber !== 9 &&
+      rawWords.length > BASMALA_WORDS_COUNT
+    ) {
+      // Verify the first word really starts with ب (ba) before stripping
+      const firstWordBare = rawWords[0].text_uthmani.replace(/[ً-ٰٟۖ-ۭ]/g, "");
+      if (firstWordBare.startsWith("ب")) {
+        rawWords = rawWords.slice(BASMALA_WORDS_COUNT);
+      }
+    }
+
+    const words: WordData[] = rawWords.map((w) => ({
+      id: w.id,
+      position: w.position,
+      textUthmani: w.text_uthmani,
+      transliteration: w.transliteration?.text ?? "",
+      translation: w.translation?.text ?? "",
+      audioUrl: w.audio_url
+        ? w.audio_url.startsWith("http")
+          ? w.audio_url
+          : `https://audio.qurancdn.com/${w.audio_url}`
+        : undefined,
+    }));
+
     return { ...ayah, words };
   });
 
