@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { blogPosts } from "../data/siteData";
+import { blogPosts, blogPhotos } from "../data/siteData";
 import { Clock, User, ArrowRight } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
 
@@ -12,6 +12,7 @@ import { useLang } from "../context/LanguageContext";
 // export const metadata = { title: "Blog — Noor-ul-Quran", description: "..." };
 
 function PostCard({ post, featured = false }: { post: typeof blogPosts[0]; featured?: boolean }) {
+  const photo = blogPhotos[post.slug];
   return (
     <Link
       href={`/blog/${post.slug}`}
@@ -19,13 +20,26 @@ function PostCard({ post, featured = false }: { post: typeof blogPosts[0]; featu
     >
       {/* Thumbnail */}
       <div
-        className={`relative bg-gradient-to-br ${post.gradient} flex items-end p-6 ${featured ? "h-64 sm:h-80" : "h-48"}`}
+        className={`relative overflow-hidden flex items-end p-6 ${featured ? "h-64 sm:h-80" : "h-48"} ${photo ? "" : `bg-gradient-to-br ${post.gradient}`}`}
       >
-        {/* Decorative glow */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{ background: `radial-gradient(ellipse at 30% 50%, ${post.accentColor}50, transparent 70%)` }}
-        />
+        {photo ? (
+          <>
+            {/* Real photo */}
+            <img
+              src={photo}
+              alt={post.title}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            {/* Dark gradient overlay for chip/text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+          </>
+        ) : (
+          /* Decorative glow fallback (no photo for this slug) */
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{ background: `radial-gradient(ellipse at 30% 50%, ${post.accentColor}50, transparent 70%)` }}
+          />
+        )}
         {/* Category chips */}
         <div className="relative flex flex-wrap gap-2">
           {post.categories.map((c) => (

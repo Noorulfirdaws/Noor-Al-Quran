@@ -178,6 +178,24 @@ export const giftCards = [
   },
 ];
 
+// Real background photos per article (Unsplash free CDN — allowed by CSP).
+export const blogPhotos: Record<string, string> = {
+  "ramadan-memorization-plan":   "https://images.unsplash.com/photo-1577214407836-1f3a0604ecb2?w=1200&q=80&fit=crop",
+  "memorize-quran-as-adult":     "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?w=1200&q=80&fit=crop",
+  "quran-rendering-digital-age": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1200&q=80&fit=crop",
+  "how-to-memorize-quran":       "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=1200&q=80&fit=crop",
+  "science-of-spaced-repetition":"https://images.unsplash.com/photo-1606166325683-e6deb697d301?w=1200&q=80&fit=crop",
+  "tajweed-rules-beginners":     "https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=1200&q=80&fit=crop",
+  "quran-mental-health":         "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=1200&q=80&fit=crop",
+  "teaching-children-quran":     "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=1200&q=80&fit=crop",
+  "history-quran-preservation":  "https://images.unsplash.com/photo-1591291621164-2c6367723315?w=1200&q=80&fit=crop",
+  "busy-professional-hifz":      "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=1200&q=80&fit=crop",
+  "understanding-surah-fatiha":  "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=1200&q=80&fit=crop",
+  "quran-arabic-non-native":     "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80&fit=crop",
+  "women-quran-memorization":    "https://images.unsplash.com/photo-1573164713988-8665fc963095?w=1200&q=80&fit=crop",
+  "accountability-partner-hifz": "https://images.unsplash.com/photo-1614935151651-0bea6508db6b?w=1200&q=80&fit=crop",
+};
+
 export const blogPosts = [
   {
     id: 1,

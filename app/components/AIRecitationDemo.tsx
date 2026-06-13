@@ -34,7 +34,8 @@ interface AyahData {
 
 /* ─── Helpers — powered by reciteService ─── */
 import {
-  type WordStatus, compareWord, splitWords as wordsOf,
+  type WordStatus, splitWords as wordsOf, stripLeadingBasmala,
+  alignRecitation, type AlignResult,
   isSpeechSupported, createRecognition, type RecognitionHandle,
 } from "../services/reciteService";
 
@@ -99,9 +100,12 @@ export default function AIRecitationDemo() {
       if (!Array.isArray(json.data) || json.data.length < 2) return null;
       const arabicAyahs = json.data[0].ayahs;
       const trAyahs = json.data[1].ayahs;
+      // Strip the Basmala prepended to ayah 1 (all surahs except 1 and 9) so it
+      // isn't shown twice — the demo renders its own Basmala line separately.
+      const strip = surahNumber !== 1 && surahNumber !== 9;
       return arabicAyahs.map((a, i) => ({
         n: a.numberInSurah,
-        ar: a.text,
+        ar: strip && a.numberInSurah === 1 ? stripLeadingBasmala(a.text) : a.text,
         tr: trAyahs[i]?.text ?? "",
       }));
     };
@@ -179,9 +183,10 @@ export default function AIRecitationDemo() {
   const startListening = useCallback(() => {
     if (!isSpeechSupported()) return;
 
-    // Sync refs to latest state before starting
+    // Sync refs to latest state before starting. Statuses must be a full-length
+    // array so the aligner can index every word.
     wordCursorRef.current = currentWordIdx;
-    wordStatusesRef.current = [...wordStatuses];
+    wordStatusesRef.current = allWords.map((_, i) => wordStatuses[i] ?? "idle");
 
     const handle = createRecognition({
       onStart: () => setListening(true),
@@ -192,44 +197,34 @@ export default function AIRecitationDemo() {
       onInterimResult: (t) => setInterimTranscript(t),
       onFinalResult: (primary, alternatives) => {
         const cursor = wordCursorRef.current;
-        const statuses = [...wordStatusesRef.current];
-
         if (cursor >= allWords.length) return;
 
         setTranscript((prev) => (prev + " " + primary).trim());
 
-        // Try each alternative; match against cursor and up to 3 words ahead
-        const expected = allWords[cursor];
-        const matched = alternatives.some((alt) =>
-          wordsOf(alt).some((sw) => compareWord(expected, sw))
-        );
-
-        if (matched) {
-          statuses[cursor] = "correct";
-          wordCursorRef.current = cursor + 1;
-        } else {
-          // Look ahead up to 3 words for a skip
-          let skipTo = -1;
-          for (let look = cursor + 1; look < Math.min(cursor + 4, allWords.length); look++) {
-            if (alternatives.some((alt) =>
-              wordsOf(alt).some((sw) => compareWord(allWords[look], sw))
-            )) { skipTo = look; break; }
-          }
-          if (skipTo >= 0) {
-            for (let k = cursor; k < skipTo; k++) statuses[k] = "skipped";
-            statuses[skipTo] = "correct";
-            wordCursorRef.current = skipTo + 1;
-          } else {
-            statuses[cursor] = "incorrect";
-            wordCursorRef.current = cursor + 1;
+        // Align the WHOLE spoken phrase against the expected word list, not just
+        // one word. Try all ASR alternatives, keep the best-scoring alignment.
+        let best: AlignResult | null = null;
+        for (const alt of alternatives) {
+          const spoken = wordsOf(alt);
+          if (spoken.length === 0) continue;
+          const res = alignRecitation(allWords, wordStatusesRef.current, cursor, spoken);
+          if (
+            !best ||
+            res.correct - res.incorrect > best.correct - best.incorrect ||
+            (res.correct - res.incorrect === best.correct - best.incorrect && res.cursor > best.cursor)
+          ) {
+            best = res;
           }
         }
 
-        wordStatusesRef.current = statuses;
-        setWordStatuses([...statuses]);
-        setCurrentWordIdx(wordCursorRef.current);
+        if (!best || best.cursor === cursor) return;
 
-        if (wordCursorRef.current >= allWords.length) {
+        wordStatusesRef.current = best.statuses;
+        wordCursorRef.current = best.cursor;
+        setWordStatuses([...best.statuses]);
+        setCurrentWordIdx(best.cursor);
+
+        if (best.cursor >= allWords.length) {
           setDone(true);
           handle.stop();
         }
@@ -267,25 +262,35 @@ export default function AIRecitationDemo() {
   return (
     <div className="min-h-screen bg-[#050907] text-white pt-20">
 
-      {/* Sticky mic FAB — always visible while scrolling through long surahs */}
+      {/* Floating mic — centered at the bottom so it's always within reach while
+          reading the surah, no scrolling to the bottom and back. */}
       {!done && supported && processedAyat.length > 0 && (
-        <div className="fixed top-20 right-4 sm:right-6 z-40">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2">
+          {/* live progress pill */}
+          {wordStatuses.length > 0 && (
+            <div className="bg-[#0d1a12]/95 backdrop-blur border border-[#57d996]/20 rounded-full px-3 py-1 text-[11px] font-mono shadow-lg flex items-center gap-2">
+              <span className="text-[#57d996]">✓{stats.correct}</span>
+              <span className="text-[#ef4444]">✗{stats.incorrect}</span>
+              <span className="text-[#f7ca45]">↷{stats.skipped}</span>
+              <span className="text-white/30">{Math.min(currentWordIdx + 1, allWords.length)}/{allWords.length}</span>
+            </div>
+          )}
           <button
             onClick={toggleMic}
             disabled={loadingAyat}
             title={listening ? "Stop listening" : "Start reciting"}
-            className={`relative w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`relative flex items-center gap-2 pl-5 pr-6 py-4 rounded-full font-black shadow-2xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
               listening
-                ? "bg-[#ef4444] shadow-[0_0_30px_rgba(239,68,68,0.5)]"
-                : "bg-[#57d996] shadow-[0_0_20px_rgba(87,217,150,0.4)] hover:shadow-[0_0_35px_rgba(87,217,150,0.6)]"
+                ? "bg-[#ef4444] text-white shadow-[0_0_30px_rgba(239,68,68,0.5)]"
+                : "bg-[#57d996] text-black shadow-[0_0_25px_rgba(87,217,150,0.5)] hover:shadow-[0_0_40px_rgba(87,217,150,0.7)]"
             }`}
           >
             {listening && (
               <span className="absolute inset-0 rounded-full bg-[#ef4444] animate-ping opacity-30 pointer-events-none" />
             )}
             {listening
-              ? <MicOff size={22} className="text-white" />
-              : <Mic size={22} className="text-black" />
+              ? <><MicOff size={20} /> Stop</>
+              : <><Mic size={20} /> Recite</>
             }
           </button>
         </div>
@@ -398,7 +403,7 @@ export default function AIRecitationDemo() {
                 <p className="text-white/30 text-sm">Loading surah…</p>
               </div>
             ) : (
-              <div className="space-y-8" dir="rtl">
+              <div className="space-y-8">
                 {processedAyat.map((ayah) => {
                   const ayahWords = wordsOf(ayah.ar);
                   let offset = 0;
@@ -409,29 +414,39 @@ export default function AIRecitationDemo() {
 
                   return (
                     <div key={ayah.n} className="group">
-                      <div className="flex items-start gap-3 justify-end">
-                        <span className="flex-shrink-0 w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-xs text-white/40 mt-1">
+                      {/* Ayah number — on the RIGHT */}
+                      <div className="flex justify-end mb-1.5">
+                        <span className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-xs text-white/40">
                           {ayah.n}
                         </span>
-                        <p className="text-3xl sm:text-4xl leading-loose font-arabic tracking-wide text-right">
-                          {ayahWords.map((word, wi) => {
-                            const globalIdx = offset + wi;
-                            const status: WordStatus = wordStatuses[globalIdx] ??
-                              (globalIdx === currentWordIdx ? "current" : "idle");
-                            return (
-                              <span
-                                key={wi}
-                                className={`inline-block mx-1 transition-all duration-200 rounded cursor-default select-none ${status === "idle" ? "hover:bg-white/10 hover:text-white" : ""} ${statusColor[status]}`}
-                              >
-                                {word}
-                              </span>
-                            );
-                          })}
-                        </p>
                       </div>
 
+                      {/* Arabic — full width, right-aligned (reads right → left).
+                          Inline font-family (same as the reader) guarantees the
+                          Uthmani/Hafs font loads so marks don't render as dots. */}
+                      <p
+                        className="text-3xl sm:text-4xl leading-loose tracking-wide text-right"
+                        dir="rtl"
+                        style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
+                      >
+                        {ayahWords.map((word, wi) => {
+                          const globalIdx = offset + wi;
+                          const status: WordStatus = wordStatuses[globalIdx] ??
+                            (globalIdx === currentWordIdx ? "current" : "idle");
+                          return (
+                            <span
+                              key={wi}
+                              className={`inline-block mx-1 transition-all duration-200 rounded cursor-default select-none ${status === "idle" ? "hover:bg-white/10 hover:text-white" : ""} ${statusColor[status]}`}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
+                      </p>
+
+                      {/* Transliteration — on the LEFT */}
                       {showTransliteration && (
-                        <p className="text-white/30 text-sm mt-2 text-right pr-11 italic">{ayah.tr}</p>
+                        <p className="text-white/30 text-sm mt-2 text-left italic" dir="ltr">{ayah.tr}</p>
                       )}
 
                       <div className="h-px bg-white/5 mt-6" />

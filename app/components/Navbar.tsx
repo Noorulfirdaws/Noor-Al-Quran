@@ -72,7 +72,7 @@ export default function Navbar() {
           <nav className="flex items-center justify-between h-16">
 
             {/* Logo — crescent + wordmark */}
-            <Link href="/" scroll={false} className="flex items-center gap-3 flex-shrink-0 group">
+            <Link href="/" className="flex items-center gap-3 flex-shrink-0 group">
               <div className="w-8 h-8 relative">
                 <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
                   {/* Outer ring */}

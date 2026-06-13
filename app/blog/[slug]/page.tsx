@@ -3,7 +3,7 @@ import { useState, use } from "react";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import { blogPosts } from "../../data/siteData";
+import { blogPosts, blogPhotos } from "../../data/siteData";
 import { ArrowLeft, Clock, User, Sun, Moon } from "lucide-react";
 import { useLang } from "../../context/LanguageContext";
 
@@ -83,9 +83,19 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
     >
       <Navbar />
 
-      {/* Hero banner — compact */}
-      <div className={`bg-gradient-to-br ${post.gradient} pt-20 pb-8 px-4 sm:px-6`}>
-        <div className="max-w-3xl mx-auto">
+      {/* Hero banner — compact, real photo background */}
+      <div className={`relative overflow-hidden pt-20 pb-8 px-4 sm:px-6 ${blogPhotos[post.slug] ? "" : `bg-gradient-to-br ${post.gradient}`}`}>
+        {blogPhotos[post.slug] && (
+          <>
+            <img
+              src={blogPhotos[post.slug]}
+              alt={post.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40" />
+          </>
+        )}
+        <div className="relative max-w-3xl mx-auto">
           <Link href="/blog" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-xs mb-4 transition-colors">
             <ArrowLeft size={13} /> {t.blogBackToBlog}
           </Link>
@@ -154,7 +164,15 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                   backgroundColor: dark ? "#1a1a1a" : "#f8f9fa",
                 }}
               >
-                <div className={`h-24 bg-gradient-to-br ${r.gradient}`} />
+                <div className={`relative h-24 overflow-hidden ${blogPhotos[r.slug] ? "" : `bg-gradient-to-br ${r.gradient}`}`}>
+                  {blogPhotos[r.slug] && (
+                    <img
+                      src={blogPhotos[r.slug]}
+                      alt={r.title}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  )}
+                </div>
                 <div className="p-4">
                   <p className="text-[10px] font-bold text-gray-400 mb-1">{r.updatedAt}</p>
                   <h4 className="text-sm font-black leading-snug group-hover:text-[#57d996] transition-colors line-clamp-2">

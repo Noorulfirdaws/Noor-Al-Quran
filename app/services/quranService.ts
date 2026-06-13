@@ -1,10 +1,11 @@
 import type { SurahMeta, AyahData, AyahWithWords, WordData } from "../types/quran";
+import { stripLeadingBasmala as stripBasmala } from "./reciteService";
 
 // ─── Cache helpers ───────────────────────────────────────────────────────────
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Bump this string to invalidate all qs: cached data
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 
 function cacheSet(key: string, value: unknown): void {
   try {
@@ -63,34 +64,10 @@ export async function getSurahList(): Promise<SurahMeta[]> {
 // The quran-uthmani edition from AlQuran Cloud prepends Bismillah text to
 // ayah 1 of every surah except Al-Fatiha (1, where it IS ayah 1) and
 // At-Tawbah (9, which has no Bismillah).
-// SurahReader renders its own Bismillah header, so we must strip the prepended
-// one from the raw ayah text.
-//
-// Uses a regex built from explicit \uXXXX escapes for the 18 consonants of
-// Bismillah, allowing any number of diacritics between each consonant.
-// This is immune to font/encoding differences in how the API returns the text.
-
-// Arabic diacritic character class (explicit hex — no inline Arabic chars)
-const D = "[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]*";
-
-// Alef + alef-wasla class
-const A = "[\\u0627\\u0671]";
-
-// Regex for full Bismillah: بسم الله الرحمن الرحيم  (with any diacritics)
-// ب=ب س=س م=م ل=ل ه=ه ر=ر ح=ح ن=ن ي=ي
-const BASMALA_RE = new RegExp(
-  `^${D}\\u0628${D}\\u0633${D}\\u0645${D}\\s+` +         // بسم
-  `${A}${D}\\u0644${D}\\u0644${D}\\u0647${D}\\s+` +       // الله
-  `${A}${D}\\u0644${D}\\u0631${D}\\u062D${D}\\u0645${D}\\u0670?${D}\\u0646${D}\\s+` + // الرحمن
-  `${A}${D}\\u0644${D}\\u0631${D}\\u062D${D}\\u064A${D}\\u0645${D}\\s*`              // الرحيم
-);
-
-function stripBasmala(text: string): string {
-  const match = BASMALA_RE.exec(text);
-  if (!match) return text;
-  const stripped = text.slice(match[0].length).trim();
-  return stripped || text; // safety: never return empty
-}
+// SurahReader renders its own Bismillah header, so the prepended copy must be
+// removed to avoid showing it twice. `stripBasmala` (imported at the top of the
+// file) normalises the first four words and compares against the Basmala
+// skeleton — robust across all surahs.
 
 // ─── Surah Data ──────────────────────────────────────────────────────────────
 

@@ -39,10 +39,10 @@ const slides = [
     sub: "Set a plan, track your progress, and complete your memorization journey with Noor-ul-Quran.",
     cta1: { label: "See Plans", href: "/#pricing" },
     cta2: { label: "▶ Live Demo", href: "/demo", accent: true },
-    // Pexels: Person reading Quran #6994948
+    // Pexels: calm aerial #3214448 (the previous video #6994948 was 403'd by Pexels)
     videoSrcs: [
-      "https://videos.pexels.com/video-files/6994948/6994948-hd_1920_1080_25fps.mp4",
-      "https://videos.pexels.com/video-files/6994948/6994948-sd_960_540_25fps.mp4",
+      "https://videos.pexels.com/video-files/3214448/3214448-hd_1920_1080_25fps.mp4",
+      "https://videos.pexels.com/video-files/3214448/3214448-sd_960_540_25fps.mp4",
     ],
     fallbackGradient: "from-[#100a02] via-[#1a1005] to-[#0a0802]",
     accentColor: "#f7ca45",

@@ -7,10 +7,11 @@ import type {
 } from "../types/quran";
 import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
-import { getAyahAudioUrl } from "../services/audioService";
+import { getAyahAudioUrl, getFallbackAyahAudioUrl } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
 import {
-  type WordStatus, normalizeArabic, compareWord, splitWords,
+  type WordStatus, splitWords,
+  alignRecitation, type AlignResult,
   isSpeechSupported, createRecognition, type RecognitionHandle,
 } from "../services/reciteService";
 
@@ -185,49 +186,33 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         setReciteInterim("");
         const cursor = reciteCursorRef.current;
         const allWords = reciteWordsRef.current;
-        const statuses = [...reciteStatusesRef.current];
+        const baseStatuses = reciteStatusesRef.current;
 
         if (cursor >= allWords.length) return;
 
-        const expected = allWords[cursor];
-
-        // Try to match against all spoken alternatives
-        const matched = alternatives.some((alt) =>
-          splitWords(alt).some((spokenWord) => compareWord(expected, spokenWord))
-        );
-
-        if (matched) {
-          statuses[cursor] = "correct";
-        } else {
-          // Look ahead: if the spoken word matches a word further on, skip intervening
-          let skipTo = -1;
-          for (let look = cursor + 1; look < Math.min(cursor + 4, allWords.length); look++) {
-            if (alternatives.some((alt) =>
-              splitWords(alt).some((sw) => compareWord(allWords[look], sw))
-            )) {
-              skipTo = look;
-              break;
-            }
-          }
-          if (skipTo >= 0) {
-            // Mark skipped
-            for (let k = cursor; k < skipTo; k++) statuses[k] = "skipped";
-            statuses[skipTo] = "correct";
-            advanceCursor(statuses, skipTo + 1);
-            if (skipTo + 1 >= allWords.length) {
-              setReciteDone(true);
-              setIsReciting(false);
-              reciteHandleRef.current?.stop();
-            }
-            return;
-          } else {
-            statuses[cursor] = "incorrect";
+        // A final result usually carries a whole phrase / ayah. Align that
+        // entire spoken word stream against the expected Uthmani word list,
+        // advancing through every word it covers. Try all ASR alternatives and
+        // keep the one that yields the best alignment (most correct, fewest
+        // wrong), so a better transcription wins.
+        let best: AlignResult | null = null;
+        for (const alt of alternatives) {
+          const spoken = splitWords(alt);
+          if (spoken.length === 0) continue;
+          const res = alignRecitation(allWords, baseStatuses, cursor, spoken);
+          if (
+            !best ||
+            res.correct - res.incorrect > best.correct - best.incorrect ||
+            (res.correct - res.incorrect === best.correct - best.incorrect && res.cursor > best.cursor)
+          ) {
+            best = res;
           }
         }
 
-        const next = cursor + 1;
-        advanceCursor(statuses, next);
-        if (next >= allWords.length) {
+        if (!best || best.cursor === cursor) return; // nothing advanced
+
+        advanceCursor(best.statuses, best.cursor);
+        if (best.cursor >= allWords.length) {
           setReciteDone(true);
           setIsReciting(false);
           reciteHandleRef.current?.stop();
@@ -275,6 +260,9 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
   // One persistent audio element — created once on client, reused for all playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Hidden element used only to warm the browser/proxy cache for the NEXT ayah,
+  // so switching to it is gapless instead of taking ~1–2s to fetch.
+  const preloadRef = useRef<HTMLAudioElement | null>(null);
   // Guard: skip Basmala injection when playing the actual ayah 1 after Basmala finishes
   const skipBasmalaRef = useRef(false);
   const surahMetaRef = useRef(surahMeta);
@@ -297,6 +285,7 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       el.onpause = null;
       el.onended = null;
       el.onerror = null;
+      if (preloadRef.current) { preloadRef.current.src = ""; preloadRef.current = null; }
     };
   }, []);
 
@@ -339,10 +328,14 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     if (el) el.src = "";
   }, [resetAudioState]);
 
-  // Core play function — sets src on persistent element and calls play()
+  // Core play function — sets src on persistent element and calls play().
+  // `fallbackUrl` (optional) is tried ONCE if the primary `url` fails to load,
+  // so a region-blocked / down CDN automatically retries the alternate source
+  // before surfacing an error to the user.
   const playSrc = useCallback((
     url: string,
     onEnded: () => void,
+    fallbackUrl?: string | null,
   ) => {
     const el = audioRef.current;
     if (!el) return;
@@ -355,20 +348,35 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     el.onerror = null;
     el.pause();
 
-    el.src = url;
+    let triedFallback = false;
 
-    el.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
-    el.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
-    el.onpause = () => {
-      if (!el.ended) { setIsPlaying(false); setIsAudioLoading(false); }
+    const attach = (srcUrl: string) => {
+      el.src = srcUrl;
+
+      el.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
+      el.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };
+      el.onpause = () => {
+        if (!el.ended) { setIsPlaying(false); setIsAudioLoading(false); }
+      };
+      el.onended = onEnded;
+      el.onerror = () => {
+        // Primary source failed — try the alternate CDN once before giving up
+        if (!triedFallback && fallbackUrl) {
+          triedFallback = true;
+          setIsAudioLoading(true);
+          attach(fallbackUrl);
+          const fp = el.play();
+          if (fp) fp.catch(() => {});
+          return;
+        }
+        setIsAudioLoading(false);
+        setIsPlaying(false);
+        setAudioError("Could not load audio. Try a different reciter.");
+        setTimeout(() => setAudioError(null), 5000);
+      };
     };
-    el.onended = onEnded;
-    el.onerror = () => {
-      setIsAudioLoading(false);
-      setIsPlaying(false);
-      setAudioError("Could not load audio. Try a different reciter.");
-      setTimeout(() => setAudioError(null), 5000);
-    };
+
+    attach(url);
 
     const p = el.play();
     if (p) {
@@ -381,6 +389,34 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       });
     }
   }, []);
+
+  // Build the proxied fallback (EveryAyah) URL for a given ayah, or null.
+  const fallbackUrlFor = useCallback((surahNumber: number, ayahNumber: number): string | null => {
+    const direct = getFallbackAyahAudioUrl(settingsRef.current.reciterId, surahNumber, ayahNumber);
+    return direct ? `/api/audio?url=${encodeURIComponent(direct)}` : null;
+  }, []);
+
+  // Warm the cache for any ayah's audio so the next switch is gapless. The proxy
+  // serves immutable, cacheable responses, so fetching once primes both the
+  // browser HTTP cache and the proxy. Works across surahs (the browser HTTP
+  // cache survives client-side navigation to the next surah's page).
+  const preloadAyah = useCallback((surahNumber: number, ayahNumber: number) => {
+    if (surahNumber < 1 || surahNumber > 114 || ayahNumber < 1) return;
+    const url = getAyahAudioUrl(settingsRef.current.reciterId, surahNumber, ayahNumber);
+    let el = preloadRef.current;
+    if (!el) { el = new Audio(); el.preload = "auto"; preloadRef.current = el; }
+    if (el.src.endsWith(url)) return; // already warming this one
+    try { el.src = url; el.load(); } catch { /* ignore */ }
+  }, []);
+
+  // Whenever a surah is loaded, warm the FIRST ayah of the NEXT surah so that
+  // moving on to it starts instantly instead of waiting ~1–2s to fetch.
+  useEffect(() => {
+    const n = surahMeta?.number;
+    if (!n || n >= 114) return;
+    const id = setTimeout(() => preloadAyah(n + 1, 1), 1500);
+    return () => clearTimeout(id);
+  }, [surahMeta?.number, preloadAyah]);
 
   const playAyah = useCallback(
     (surahNumber: number, ayahNumber: number) => {
@@ -411,7 +447,7 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
           setIsPlaying(false);
           setIsAudioLoading(false);
           afterBasmala();
-        });
+        }, fallbackUrlFor(1, 1));
         return;
       }
 
@@ -445,13 +481,21 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
           setPlayingAyah(null);
           setHighlightedAyah(null);
         }
-      });
+      }, fallbackUrlFor(surahNumber, ayahNumber));
+
+      // Warm the NEXT ayah now so continuing playback is gapless. At the end of
+      // a surah, warm the first ayah of the following surah instead.
+      const m = surahMetaRef.current;
+      if (m && ayahNumber + 1 <= m.numberOfAyahs) {
+        preloadAyah(surahNumber, ayahNumber + 1);
+      } else if (surahNumber < 114) {
+        preloadAyah(surahNumber + 1, 1);
+      }
 
       // Save progress
-      const meta = surahMetaRef.current;
-      if (meta) saveProgress({ surahNumber, ayahNumber, surahName: meta.englishName });
+      if (m) saveProgress({ surahNumber, ayahNumber, surahName: m.englishName });
     },
-    [playSrc]
+    [playSrc, fallbackUrlFor, preloadAyah]
   );
 
   // Keep ref current so event callbacks never go stale

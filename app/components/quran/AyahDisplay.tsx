@@ -180,53 +180,54 @@ export default function AyahDisplay({
       }`}
       onClick={() => setHighlightedAyah(ayah.numberInSurah)}
     >
-      {/* Two-column layout: [LEFT: number + translation] [RIGHT: Arabic] */}
-      <div className="flex flex-row gap-4 items-start max-w-5xl mx-auto">
+      {/* Stacked layout: Arabic right-aligned (every verse hugs the right edge),
+          transliteration + translation left-aligned below. */}
+      <div className="max-w-3xl mx-auto">
 
-        {/* LEFT column: ayah number + actions + translation */}
-        <div className="w-[38%] flex-shrink-0 flex flex-col gap-1 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full border border-white/15 flex items-center justify-center text-[10px] text-white/35 font-mono flex-shrink-0">
-                {ayah.numberInSurah}
-              </div>
-              <span className="text-white/15 text-[9px] uppercase tracking-widest hidden sm:inline">
-                Juz {ayah.juz}
-              </span>
+        {/* Header row — ayah number on the RIGHT, actions on the LEFT (RTL) */}
+        <div className="flex items-center justify-between mb-1.5" dir="rtl">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full border border-white/15 flex items-center justify-center text-[10px] text-white/35 font-mono flex-shrink-0">
+              {ayah.numberInSurah}
             </div>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={(e) => { e.stopPropagation(); handlePlay(); }}
-                className="p-1.5 text-white/35 hover:text-[#57d996] hover:bg-[#57d996]/10 rounded-md transition-all"
-                title="Play"
-              >
-                <Play size={13} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleBookmark(); }}
-                className="p-1.5 text-white/35 hover:text-[#f7ca45] hover:bg-[#f7ca45]/10 rounded-md transition-all"
-                title={bookmarked ? "Remove bookmark" : "Bookmark"}
-              >
-                {bookmarked ? <BookmarkCheck size={13} className="text-[#f7ca45]" /> : <Bookmark size={13} />}
-              </button>
-            </div>
+            <span className="text-white/15 text-[9px] uppercase tracking-widest hidden sm:inline" dir="ltr">
+              Juz {ayah.juz}
+            </span>
           </div>
-          {settings.showTranslation && ayah.translation && (
-            <p className="text-white/50 text-[12px] leading-snug">
-              {ayah.translation}
-            </p>
-          )}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => { e.stopPropagation(); handlePlay(); }}
+              className="p-1.5 text-white/35 hover:text-[#57d996] hover:bg-[#57d996]/10 rounded-md transition-all"
+              title="Play"
+            >
+              <Play size={13} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleBookmark(); }}
+              className="p-1.5 text-white/35 hover:text-[#f7ca45] hover:bg-[#f7ca45]/10 rounded-md transition-all"
+              title={bookmarked ? "Remove bookmark" : "Bookmark"}
+            >
+              {bookmarked ? <BookmarkCheck size={13} className="text-[#f7ca45]" /> : <Bookmark size={13} />}
+            </button>
+          </div>
         </div>
 
-        {/* RIGHT column: Arabic text (takes remaining ~62% width) */}
-        <div className="flex-1 min-w-0">
-          {renderArabicBlock()}
-          {settings.showTransliteration && ayah.transliteration && (
-            <p className="text-white/35 text-xs italic mt-1 text-right leading-relaxed" dir="rtl">
-              {ayah.transliteration}
-            </p>
-          )}
-        </div>
+        {/* Arabic — full width, right-aligned */}
+        {renderArabicBlock()}
+
+        {/* Transliteration — left-aligned */}
+        {settings.showTransliteration && ayah.transliteration && (
+          <p className="text-white/35 text-xs italic mt-2 text-left leading-relaxed" dir="ltr">
+            {ayah.transliteration}
+          </p>
+        )}
+
+        {/* Translation — left-aligned */}
+        {settings.showTranslation && ayah.translation && (
+          <p className="text-white/55 text-[13px] mt-1 text-left leading-snug" dir="ltr">
+            {ayah.translation}
+          </p>
+        )}
 
       </div>
     </div>

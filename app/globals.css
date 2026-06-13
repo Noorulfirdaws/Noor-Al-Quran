@@ -23,6 +23,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Quranic (Uthmani / Hafs) script font. Without this, Arabic falls back to a
+   non-Arabic font that can't position the Hafs marks (sukun, dagger-alif, …),
+   making them render as stray dots / dotted circles. */
+.font-arabic {
+  font-family: var(--font-quran), var(--font-amiri), "Amiri Quran", "Amiri", "Scheherazade New", serif;
+}
+
 /* Modal animation */
 @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes zoom-in-95 { from { transform: scale(0.95) } to { transform: scale(1) } }

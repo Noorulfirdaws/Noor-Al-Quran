@@ -42,9 +42,11 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     scrolledRef.current = false;
   }, [surahNumber, loadSurah]);
 
-  // Load word data when entering word-by-word mode
+  // Load word data when entering word-by-word OR recite mode.
+  // Recite mode aligns the spoken stream against per-word Uthmani tokens, so it
+  // needs the same word data for accurate, word-level mistake detection.
   useEffect(() => {
-    if (mode === "word-by-word" && ayahsWithWords.length === 0) {
+    if ((mode === "word-by-word" || mode === "recite") && ayahsWithWords.length === 0) {
       loadWords(surahNumber);
     }
   }, [mode, ayahsWithWords.length, loadWords, surahNumber]);
@@ -419,6 +421,42 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
           </div>
         )}
       </div>
+
+      {/* Floating recite button — pinned near the TOP so it's instantly reachable
+          on long surahs without scrolling to the bottom and back. */}
+      {mode === "recite" && (
+        <div className="fixed top-36 right-5 z-50 flex flex-col items-end gap-2">
+          {/* Live progress / accuracy pill */}
+          {reciteWordStatuses.length > 0 && (
+            <div className="bg-[#0d1a12]/95 backdrop-blur border border-[#57d996]/20 rounded-full px-3 py-1 text-[11px] font-mono shadow-lg flex items-center gap-2">
+              <span className="text-green-400">✓{reciteStats.correct}</span>
+              <span className="text-red-400">✗{reciteStats.incorrect}</span>
+              <span className="text-yellow-400">↷{reciteStats.skipped}</span>
+              <span className="text-white/30">
+                {Math.min(reciteWordCursor + 1, reciteWordStatuses.length)}/{reciteWordStatuses.length}
+              </span>
+            </div>
+          )}
+
+          <button
+            onClick={reciteDone ? resetRecite : isReciting ? stopReciting : startReciting}
+            title={reciteDone ? "Restart" : isReciting ? "Stop reciting" : "Start reciting"}
+            className={`flex items-center gap-2 pl-4 pr-5 py-3.5 rounded-full font-black text-sm shadow-2xl transition-all active:scale-95 ${
+              isReciting
+                ? "bg-red-500 text-white shadow-red-500/40 animate-pulse"
+                : "bg-[#57d996] text-black shadow-[#57d996]/40 hover:bg-[#6ff2a8]"
+            }`}
+          >
+            {reciteDone ? (
+              <>↺ Restart</>
+            ) : isReciting ? (
+              <><Mic size={16} /> Stop</>
+            ) : (
+              <><Mic size={16} /> Recite</>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Fixed bottom controls */}
       {surahMeta && <AudioPlayer surahNumber={surahNumber} totalAyahs={surahMeta.numberOfAyahs} />}
