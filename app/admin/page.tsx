@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle, Mic, BarChart2, Calendar, Target, ShieldCheck, ExternalLink, ChevronRight } from "lucide-react";
+import { CheckCircle, Mic, BarChart2, Calendar, Target, ShieldCheck, ExternalLink, ChevronRight, Gift, Copy, Check, Ticket } from "lucide-react";
+import { generateCode, builtInPromos } from "../services/promoService";
 
 const BYPASS_KEY = "noor_admin_premium";
 
@@ -102,6 +103,96 @@ function CheckoutPreview() {
   );
 }
 
+function CodeRow({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const link = `${typeof window !== "undefined" ? window.location.origin : ""}/redeem?code=${encodeURIComponent(code)}`;
+    navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); });
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+      <code className="text-[#57d996] text-sm font-bold tracking-wider break-all">{code}</code>
+      <button onClick={copy} className="flex-shrink-0 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 transition-all" title="Copy redeem link">
+        {copied ? <Check size={14} className="text-[#57d996]" /> : <Copy size={14} />}
+      </button>
+    </div>
+  );
+}
+
+function PromoGenerator() {
+  const [label, setLabel] = useState("Promo");
+  const [days, setDays] = useState(30);
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [code, setCode] = useState<string | null>(null);
+
+  const gen = () => {
+    const exp = Date.parse(endDate + "T23:59:59");
+    if (isNaN(exp)) return;
+    setCode(generateCode({ label: label.trim() || "Promo", days: Math.max(1, days), exp }));
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-black mb-1 flex items-center gap-2"><Gift size={18} className="text-[#57d996]" /> Promo Codes &amp; Lead Magnets</h2>
+      <p className="text-white/40 text-sm mb-5">
+        Generate a time-limited free-access code to share for promotions or lead magnets. Each code carries its own
+        rules — it grants premium for a set number of days and stops working after the promotion end date.
+      </p>
+
+      <div className="grid sm:grid-cols-3 gap-4">
+        {/* Generator */}
+        <div className="sm:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-white/50 text-xs block mb-1">Promotion name</span>
+              <input value={label} onChange={(e) => setLabel(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#57d996]/50" />
+            </label>
+            <label className="block">
+              <span className="text-white/50 text-xs block mb-1">Access length (days)</span>
+              <input type="number" min={1} value={days} onChange={(e) => setDays(parseInt(e.target.value) || 1)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#57d996]/50" />
+            </label>
+            <label className="block col-span-2">
+              <span className="text-white/50 text-xs block mb-1">Redeemable until (promotion end)</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#57d996]/50" />
+            </label>
+          </div>
+          <button onClick={gen}
+            className="w-full bg-[#57d996] hover:bg-[#6ff2a8] text-black font-black py-2.5 rounded-xl text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+            <Ticket size={15} /> Generate code
+          </button>
+          {code && (
+            <div className="pt-1">
+              <p className="text-white/40 text-[11px] mb-1.5">
+                Share this code or the copied link. Grants {days} day{days === 1 ? "" : "s"} of premium, redeemable until {endDate}.
+              </p>
+              <CodeRow code={code} />
+            </div>
+          )}
+        </div>
+
+        {/* Built-in codes */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-3">Ready-to-share</p>
+          <div className="space-y-2">
+            {Object.entries(builtInPromos).map(([c, t]) => (
+              <div key={c}>
+                <CodeRow code={c} />
+                <p className="text-white/25 text-[10px] mt-0.5 px-1">{t.label} · {t.days} days</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [bypassActive, setBypassActive] = useState(false);
 
@@ -189,6 +280,9 @@ export default function AdminPage() {
             ))}
           </div>
         </div>
+
+        {/* Promo codes / lead magnets */}
+        <PromoGenerator />
 
         {/* Checkout bypass */}
         <div>

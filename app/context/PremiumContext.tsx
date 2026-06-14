@@ -1,40 +1,54 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { PremiumFeature } from "../types/quran";
+import { getActivePromo, promoDaysLeft } from "../services/promoService";
 
 const BYPASS_KEY = "noor_admin_premium";
 
 // In production this would check a real subscription API.
-// For now: localStorage bypass set by /admin page.
+// For now: localStorage — admin bypass OR an unexpired promo/lead-magnet code.
 
 interface PremiumCtx {
   isPremium: boolean;
+  promoLabel: string | null;   // active promo name, if access is via a code
+  promoDaysLeft: number;       // whole days left on the promo (0 if none)
   isFeatureAllowed: (feature: PremiumFeature, surahNumber: number) => boolean;
   refreshPremium: () => void;
 }
 
 const PremiumContext = createContext<PremiumCtx>({
   isPremium: false,
+  promoLabel: null,
+  promoDaysLeft: 0,
   isFeatureAllowed: () => false,
   refreshPremium: () => {},
 });
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false);
+  const [promoLabel, setPromoLabel] = useState<string | null>(null);
+  const [daysLeft, setDaysLeft] = useState(0);
 
   const check = () => {
     try {
-      setIsPremium(localStorage.getItem(BYPASS_KEY) === "1");
+      const admin = localStorage.getItem(BYPASS_KEY) === "1";
+      const promo = getActivePromo();
+      setIsPremium(admin || !!promo);
+      setPromoLabel(promo ? promo.label : null);
+      setDaysLeft(promo ? promoDaysLeft() : 0);
     } catch {
       setIsPremium(false);
+      setPromoLabel(null);
+      setDaysLeft(0);
     }
   };
 
   useEffect(() => {
     check();
-    // Re-check when tab regains focus (user may have unlocked in another tab)
+    // Re-check when tab regains focus, and hourly so an expiring promo lapses.
     window.addEventListener("focus", check);
-    return () => window.removeEventListener("focus", check);
+    const id = setInterval(check, 60 * 60 * 1000);
+    return () => { window.removeEventListener("focus", check); clearInterval(id); };
   }, []);
 
   /**
@@ -54,7 +68,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <PremiumContext.Provider value={{ isPremium, isFeatureAllowed, refreshPremium: check }}>
+    <PremiumContext.Provider value={{ isPremium, promoLabel, promoDaysLeft: daysLeft, isFeatureAllowed, refreshPremium: check }}>
       {children}
     </PremiumContext.Provider>
   );
