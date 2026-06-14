@@ -61,30 +61,30 @@ export default function Footer() {
       heading: t.footerCompany,
       links: [
         { label: t.footerBlog, href: "/blog" },
-        { label: t.footerCareers, href: "#" },
-        { label: t.footerScholarships, href: "#" },
-        { label: t.footerSupport, href: "#" },
-        { label: t.footerFeatureReq, href: "#" },
+        { label: t.footerCareers, href: "/careers" },
+        { label: t.footerScholarships, href: "/scholarships" },
+        { label: t.footerSupport, href: "/support" },
+        { label: t.footerFeatureReq, href: "/feature-requests" },
       ],
     },
     {
       heading: t.footerCommunity,
       links: [
         { label: t.footerPodcast, href: "/#community" },
-        { label: t.footerNetwork, href: "#" },
-        { label: t.footerDiscord, href: "#" },
-        { label: t.footerRamadan, href: "#" },
+        { label: t.footerNetwork, href: "/hifz-network" },
+        { label: t.footerDiscord, href: "/support" },
+        { label: t.footerRamadan, href: "/ramadan-hub" },
       ],
     },
     {
       heading: t.footerLegal,
       links: [
-        { label: t.footerPrivacy, href: "#" },
-        { label: t.footerTerms, href: "#" },
-        { label: t.footerCookies, href: "#" },
+        { label: t.footerPrivacy, href: "/privacy" },
+        { label: t.footerTerms, href: "/terms" },
+        { label: t.footerCookies, href: "/cookies" },
       ],
     },
-  ];;
+  ];
 
   return (
     <footer className="bg-[#050907] border-t border-white/10 pt-16 pb-8 px-4 sm:px-6">
@@ -114,14 +114,14 @@ export default function Footer() {
             {/* Socials */}
             <div className="flex gap-2 flex-wrap">
               {[
-                { icon: <IGIcon />, label: "Instagram" },
-                { icon: <YTIcon />, label: "YouTube" },
-                { icon: <TikTokIcon />, label: "TikTok" },
-                { icon: <XIcon />, label: "X" },
-                { icon: <MessageCircle size={16} />, label: "Discord" },
-                { icon: <GitBranch size={16} />, label: "GitHub" },
+                { icon: <IGIcon />, label: "Instagram", href: "https://instagram.com" },
+                { icon: <YTIcon />, label: "YouTube", href: "https://youtube.com" },
+                { icon: <TikTokIcon />, label: "TikTok", href: "https://tiktok.com" },
+                { icon: <XIcon />, label: "X", href: "https://x.com" },
+                { icon: <MessageCircle size={16} />, label: "Discord", href: "https://discord.com" },
+                { icon: <GitBranch size={16} />, label: "GitHub", href: "https://github.com/Noorulfirdaws/Noor-Al-Quran" },
               ].map((s) => (
-                <a key={s.label} href="#" aria-label={s.label}
+                <a key={s.label} href={s.href} aria-label={s.label} target="_blank" rel="noopener noreferrer"
                   className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
                   {s.icon}
                 </a>
@@ -178,8 +178,8 @@ export default function Footer() {
               )}
             </div>
 
-            <a href="#" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Privacy</a>
-            <a href="#" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Terms</a>
+            <a href="/privacy" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Privacy</a>
+            <a href="/terms" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">Terms</a>
           </div>
         </div>
       </div>
