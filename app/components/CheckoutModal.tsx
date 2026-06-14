@@ -143,12 +143,25 @@ export default function CheckoutModal({ plan, onClose }: Props) {
           {/* ── Free plan ── */}
           {isFree && (
             <div className="flex flex-col gap-3">
+              {/* Primary: start right here in the browser — no download */}
+              <a href="/signup"
+                className="flex items-center justify-center gap-2 bg-[#57d996] hover:bg-[#6ff2a8] text-black py-3.5 rounded-2xl font-black text-sm transition-colors active:scale-[0.98]">
+                Start free on the web →
+              </a>
+              <p className="text-center text-gray-400 text-[11px] -mt-1">No download needed — use it right in your browser.</p>
+
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-gray-400 text-[11px]">or get the app</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
               <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-[#050907] text-white py-3.5 rounded-2xl font-bold text-sm hover:bg-black transition-colors">
+                className="flex items-center justify-center gap-2 bg-[#050907] text-white py-3 rounded-2xl font-bold text-sm hover:bg-black transition-colors">
                 <Smartphone size={16} /> Download on the App Store
               </a>
               <a href="https://play.google.com" target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 border-2 border-[#050907] text-[#050907] py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
+                className="flex items-center justify-center gap-2 border-2 border-[#050907] text-[#050907] py-3 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
                 <Smartphone size={16} /> Get it on Google Play
               </a>
             </div>

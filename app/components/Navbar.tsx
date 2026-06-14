@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, LogOut, ShieldCheck, BookOpen } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 const BANNER_KEY = "noor:banner-dismissed";
 const BANNER_HIDDEN_PATHS = ["/quran", "/demo"];
@@ -13,6 +14,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true); // default true to avoid flash
   const { t } = useLang();
+  const { user, isAuthed, isAdmin, logout } = useAuth();
   const pathname = usePathname();
   const hideBanner = BANNER_HIDDEN_PATHS.some((p) => pathname?.startsWith(p));
 
@@ -114,21 +116,42 @@ export default function Navbar() {
 
             {/* Desktop right buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <a
-                href="/"
-                className="text-white/70 hover:text-white text-sm font-medium transition-colors duration-150 px-2"
-              >
-                {t.navSignIn}
-              </a>
-              <a
-                href="/#pricing"
-                className="relative bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-5 py-2 rounded-full text-sm transition-all duration-150 active:scale-95 flex items-center gap-1.5 shadow-[0_0_16px_rgba(87,217,150,0.35)]"
-              >
-                {t.navStartFree}
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </a>
+              {isAuthed ? (
+                <>
+                  <span className="flex items-center gap-1.5 text-xs text-white/60">
+                    {isAdmin ? <ShieldCheck size={14} className="text-[#f7ca45]" /> : <BookOpen size={14} className="text-[#57d996]" />}
+                    <span className="font-semibold text-white/80 max-w-[120px] truncate">{user?.name.split(" ")[0]}</span>
+                    {isAdmin && <span className="text-[9px] font-black uppercase tracking-wider text-[#f7ca45] bg-[#f7ca45]/10 px-1.5 py-0.5 rounded-full">Admin</span>}
+                  </span>
+                  <Link
+                    href="/quran"
+                    className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-5 py-2 rounded-full text-sm transition-all active:scale-95 shadow-[0_0_16px_rgba(87,217,150,0.35)]"
+                  >
+                    Open Quran
+                  </Link>
+                  <button onClick={logout} title="Log out" className="text-white/40 hover:text-white transition-colors p-1.5">
+                    <LogOut size={16} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-white/70 hover:text-white text-sm font-medium transition-colors duration-150 px-2"
+                  >
+                    {t.navSignIn}
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="relative bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-5 py-2 rounded-full text-sm transition-all duration-150 active:scale-95 flex items-center gap-1.5 shadow-[0_0_16px_rgba(87,217,150,0.35)]"
+                  >
+                    {t.navStartFree}
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile hamburger */}
@@ -157,15 +180,31 @@ export default function Navbar() {
                 </a>
               ))}
               <div className="border-t border-white/10 mt-3 pt-3 flex flex-col gap-2">
-                <a href="/" className="text-white/70 text-sm font-medium px-4 py-2.5 text-center">
-                  {t.navSignIn}
-                </a>
-                <a
-                  href="/#pricing"
-                  className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-4 py-2.5 rounded-full text-sm text-center transition-colors"
-                >
-                  {t.navStartFree} →
-                </a>
+                {isAuthed ? (
+                  <>
+                    <span className="text-white/50 text-xs px-4 text-center">
+                      Signed in as <span className="text-white/80 font-semibold">{user?.name}</span>{isAdmin ? " · Admin" : ""}
+                    </span>
+                    <Link href="/quran" onClick={() => setOpen(false)}
+                      className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-4 py-2.5 rounded-full text-sm text-center transition-colors">
+                      Open Quran →
+                    </Link>
+                    <button onClick={() => { logout(); setOpen(false); }}
+                      className="text-white/50 hover:text-white text-sm font-medium px-4 py-2.5 text-center">
+                      Log out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setOpen(false)} className="text-white/70 text-sm font-medium px-4 py-2.5 text-center">
+                      {t.navSignIn}
+                    </Link>
+                    <Link href="/signup" onClick={() => setOpen(false)}
+                      className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-4 py-2.5 rounded-full text-sm text-center transition-colors">
+                      {t.navStartFree} →
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

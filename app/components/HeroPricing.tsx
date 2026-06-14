@@ -24,7 +24,7 @@ const slides = [
     headline: ["Recite", "Perfectly."],
     sub: "Word-by-word AI feedback as you recite. Know exactly where you made a mistake.",
     cta1: { label: "See How It Works", href: "/#features" },
-    cta2: { label: "Start Free", href: "/#pricing", accent: true },
+    cta2: { label: "Start Free", href: "/signup", accent: true },
     // Pexels video: Tablet while praying #7953222
     videoSrcs: [
       "https://videos.pexels.com/video-files/7953222/7953222-hd_1920_1080_25fps.mp4",
