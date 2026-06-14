@@ -7,7 +7,7 @@ import type {
 } from "../types/quran";
 import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
-import { getAyahAudioUrl, getFallbackAyahAudioUrl } from "../services/audioService";
+import { getAyahAudioUrl, getFallbackAyahAudioUrl, getReciterById } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
 import {
   type WordStatus, splitWords,
@@ -295,7 +295,11 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<ReaderSettings>;
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+        const merged = { ...DEFAULT_SETTINGS, ...parsed };
+        // Migrate any retired/invalid reciter id (e.g. old "ar.*" CDN ids) to a
+        // valid one so the menu highlight and audio stay in sync.
+        merged.reciterId = getReciterById(merged.reciterId).id;
+        setSettings(merged);
       }
     } catch { /* ignore */ }
   }, []);
@@ -500,6 +504,20 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
   // Keep ref current so event callbacks never go stale
   playAyahRef.current = playAyah;
+
+  // When the reciter changes mid-playback, immediately restart the current ayah
+  // with the new reciter (instead of waiting for the next ayah).
+  const prevReciterRef = useRef(settings.reciterId);
+  useEffect(() => {
+    if (prevReciterRef.current === settings.reciterId) return;
+    prevReciterRef.current = settings.reciterId;
+    const meta = surahMetaRef.current;
+    if (playingAyah !== null && meta) {
+      // Reset the preload cache so it warms with the new reciter, then replay.
+      if (preloadRef.current) preloadRef.current.src = "";
+      playAyahRef.current?.(meta.number, playingAyah);
+    }
+  }, [settings.reciterId, playingAyah]);
 
   const pauseAudio = useCallback(() => {
     audioRef.current?.pause();
