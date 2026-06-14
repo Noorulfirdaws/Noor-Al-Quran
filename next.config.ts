@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
+// Base headers applied to ALL routes. X-Frame-Options is added separately below
+// so the embeddable /embed/* widgets can be framed by other sites.
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
@@ -30,9 +31,17 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   async headers() {
     return [
+      // Common security headers everywhere.
+      { source: "/(.*)", headers: securityHeaders },
+      // Clickjacking protection for everything EXCEPT the embeddable widgets.
       {
-        source: "/(.*)",
-        headers: securityHeaders,
+        source: "/:path((?!embed).*)",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+      },
+      // /embed/* may be framed by any site.
+      {
+        source: "/embed/:path*",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
       },
     ];
   },

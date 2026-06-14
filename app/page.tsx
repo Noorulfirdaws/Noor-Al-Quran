@@ -8,6 +8,7 @@ import VideoCarousel from "./components/VideoCarousel";
 import FeatureComparison from "./components/FeatureComparison";
 import GiftCards from "./components/GiftCards";
 import BlogSection from "./components/BlogSection";
+import BookShelf from "./components/BookShelf";
 import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
 
@@ -24,6 +25,7 @@ export default function Home() {
       <FeatureComparison />
       <GiftCards />
       <BlogSection />
+      <BookShelf />
       <FAQ />
       <Footer />
     </main>

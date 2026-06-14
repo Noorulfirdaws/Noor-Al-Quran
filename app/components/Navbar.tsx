@@ -22,6 +22,7 @@ export default function Navbar() {
     { label: "Quran", href: "/quran" },
     { label: t.navPricing, href: "/#pricing" },
     { label: t.navBlog, href: "/blog" },
+    { label: "Library", href: "/library" },
   ];
 
   useEffect(() => {
