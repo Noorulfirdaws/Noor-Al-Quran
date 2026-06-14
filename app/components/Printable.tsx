@@ -1,5 +1,6 @@
 "use client";
 import type { DigitalProduct } from "../data/products";
+import { bookContent } from "../data/books";
 
 /**
  * Renders a real, print-ready page for a product's `printable` spec.
@@ -116,24 +117,44 @@ export default function Printable({ product }: { product: DigitalProduct }) {
         </table>
       )}
 
-      {/* ── BOOK (table of contents) ── */}
-      {pr.kind === "book" && pr.chapters && (
-        <div>
-          <h2 className="text-lg font-black mb-4" style={{ color: accent }}>Table of Contents</h2>
-          <ol className="space-y-2.5">
-            {pr.chapters.map((c, i) => (
-              <li key={i} className="flex items-baseline gap-2 text-[15px]">
-                <span className="font-bold w-6" style={{ color: accent }}>{i + 1}</span>
-                <span className="flex-1">{c}</span>
-                <span className="flex-1 border-b border-dotted border-gray-300 mx-2" />
-                <span className="text-gray-400 text-xs">p. {i * 12 + 7}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {/* ── BOOK (table of contents + full chapter content) ── */}
+      {pr.kind === "book" && (() => {
+        const chapters = bookContent[product.slug];
+        const tocTitles = chapters ? chapters.map((c) => c.title) : (pr.chapters ?? []);
+        return (
+          <div>
+            {/* Table of contents */}
+            <h2 className="text-lg font-black mb-4" style={{ color: accent }}>Table of Contents</h2>
+            <ol className="space-y-2.5">
+              {tocTitles.map((c, i) => (
+                <li key={i} className="flex items-baseline gap-2 text-[15px]">
+                  <span className="font-bold w-6" style={{ color: accent }}>{i + 1}</span>
+                  <span className="flex-1">{c}</span>
+                  <span className="flex-1 border-b border-dotted border-gray-300 mx-2" />
+                  <span className="text-gray-400 text-xs">p. {i + 2}</span>
+                </li>
+              ))}
+            </ol>
 
-      {pr.note && <p className="text-gray-500 text-xs italic mt-6">{pr.note}</p>}
+            {/* Full chapters — each starts on a new printed page */}
+            {chapters && chapters.map((ch, i) => (
+              <article key={i} className="mt-10 break-before-page">
+                <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: accent }}>
+                  Chapter {i + 1}
+                </p>
+                <h2 className="text-2xl font-black mb-4 border-b pb-2" style={{ borderColor: `${accent}55` }}>
+                  {ch.title}
+                </h2>
+                {ch.body.split("\n\n").map((para, j) => (
+                  <p key={j} className="text-[15px] leading-7 mb-3 text-gray-800">{para}</p>
+                ))}
+              </article>
+            ))}
+          </div>
+        );
+      })()}
+
+      {pr.note && pr.kind !== "book" && <p className="text-gray-500 text-xs italic mt-6">{pr.note}</p>}
 
       <p className="text-center text-[10px] text-gray-300 mt-10">
         noor-ul-quran.com — free to print & share for personal use
