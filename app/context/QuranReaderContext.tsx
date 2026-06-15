@@ -234,11 +234,15 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       const baseStatuses = reciteStatusesRef.current;
       if (allWords.length === 0 || cursor >= allWords.length) return;
 
+      // Interim (live) coloring uses a STRICTER match bar so a word only turns
+      // green when we're confident — stops "marked correct while not heard /
+      // wrong said good". The final commit uses the normal balanced threshold.
+      const threshold = commit ? undefined : 0.85;
       let best: AlignResult | null = null;
       for (const alt of alts) {
         const spoken = splitWords(alt);
         if (spoken.length === 0) continue;
-        const res = alignRecitation(allWords, baseStatuses, cursor, spoken);
+        const res = alignRecitation(allWords, baseStatuses, cursor, spoken, 4, threshold);
         if (
           !best ||
           res.correct - res.incorrect > best.correct - best.incorrect ||

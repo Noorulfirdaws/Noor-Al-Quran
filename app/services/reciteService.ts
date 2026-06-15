@@ -179,6 +179,7 @@ export function alignRecitation(
   cursor: number,
   spokenWords: string[],
   lookahead = 4,
+  matchThreshold = MATCH_THRESHOLD,
 ): AlignResult {
   const out = statuses.slice();
   const confidences: number[] = new Array(statuses.length).fill(0);
@@ -202,7 +203,7 @@ export function alignRecitation(
     for (let j = 1; j <= m; j++) {
       const sm = wordSimilarity(E[i - 1], S[j - 1]);
       sim[i - 1][j - 1] = sm;
-      const diagScore = sm >= MATCH_THRESHOLD ? sm : MISMATCH;
+      const diagScore = sm >= matchThreshold ? sm : MISMATCH;
       dp[i][j] = Math.max(
         dp[i - 1][j - 1] + diagScore,   // align E[i-1] with S[j-1]
         dp[i - 1][j] + GAP_EXPECTED,    // E[i-1] skipped
@@ -228,9 +229,9 @@ export function alignRecitation(
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0) {
       const sm = sim[i - 1][j - 1];
-      const diagScore = sm >= MATCH_THRESHOLD ? sm : MISMATCH;
+      const diagScore = sm >= matchThreshold ? sm : MISMATCH;
       if (dp[i][j] === dp[i - 1][j - 1] + diagScore) {
-        ops.push({ ei: i - 1, kind: sm >= MATCH_THRESHOLD ? "match" : "mismatch" });
+        ops.push({ ei: i - 1, kind: sm >= matchThreshold ? "match" : "mismatch" });
         i--; j--; continue;
       }
     }

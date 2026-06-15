@@ -141,6 +141,25 @@ describe("wordSimilarity — confidence primitive", () => {
   });
 });
 
+describe("alignRecitation — stricter live threshold prevents false green", () => {
+  // A borderline last word (sim ~0.75) preceded by correct words: at the default
+  // 0.72 bar it's accepted as "correct"; at the strict 0.85 live bar it is NOT
+  // greened (stays "current"/waiting) — exactly the "don't mark correct unless
+  // confident" behaviour the live path needs.
+  const AYAH4 = ["ٱلْحَمْدُ", "لِلَّهِ", "رَبِّ", "ٱلْعَٰلَمِينَ"];
+  // العالمين (8 letters) with 2 substitutions → sim ~0.75
+  const spoken = ["الحمد", "لله", "رب", "العشلمون"];
+
+  it("greens the borderline word at the default threshold", () => {
+    const res = alignRecitation(AYAH4, freshStatuses(4), 0, spoken, 4, 0.72);
+    expect(res.statuses[3]).toBe("correct");
+  });
+  it("does NOT green the borderline word at the strict live threshold", () => {
+    const res = alignRecitation(AYAH4, freshStatuses(4), 0, spoken, 4, 0.85);
+    expect(res.statuses[3]).not.toBe("correct");
+  });
+});
+
 describe("recitationCompletion — completion engine", () => {
   it("is NOT complete mid-ayah even if some words are done", () => {
     const statuses: WordStatus[] = ["correct", "correct", "current", "idle"];
