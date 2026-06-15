@@ -24,6 +24,7 @@ export default function Navbar() {
     { label: "Quran", href: "/quran" },
     { label: t.navPricing, href: "/#pricing" },
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Goals", href: "/goals" },
     { label: t.navBlog, href: "/blog" },
     { label: "Library", href: "/library" },
   ];

@@ -8,7 +8,8 @@ import {
 } from "../services/gamificationService";
 import MemorizationHeatmap from "../components/quran/MemorizationHeatmap";
 import HifzTimeline from "../components/quran/HifzTimeline";
-import { Flame, Zap, Trophy, Star, BookOpen, Target, TrendingUp, BarChart3, ArrowRight, Mic, Lock } from "lucide-react";
+import { getGoal, goalProgress, fmtDate } from "../services/goalService";
+import { Flame, Zap, Trophy, Star, BookOpen, Target, TrendingUp, BarChart3, ArrowRight, Mic, Lock, CalendarCheck } from "lucide-react";
 
 export default function DashboardPage() {
   const [state, setState] = useState<GamificationState | null>(null);
@@ -20,6 +21,8 @@ export default function DashboardPage() {
   const lvl = xpForNextLevel(state.totalXp);
   const struggles = getStruggles(5);
   const tip = dailyCoachTip();
+  const goal = getGoal();
+  const goalProg = goal ? goalProgress(goal) : null;
   const recentSessions = state.sessions.slice(0, 7);
   const avgAccuracy = recentSessions.length
     ? Math.round(recentSessions.reduce((s, x) => s + x.accuracy, 0) / recentSessions.length)
@@ -65,6 +68,37 @@ export default function DashboardPage() {
               <StatCard icon={<Target size={18} className="text-blue-400" />} value={`${avgAccuracy}%`} label="Avg Accuracy" accent="blue" />
               <StatCard icon={<BookOpen size={18} className="text-purple-400" />} value={`${state.totalSessions}`} label="Sessions" accent="purple" />
             </div>
+
+            {/* Active goal forecast */}
+            {goal && goalProg ? (
+              <Link href="/goals" className="block bg-gradient-to-r from-[#57d996]/10 to-[#18c8d8]/8 border border-[#57d996]/20 rounded-2xl p-5 mb-6 hover:border-[#57d996]/40 transition-all">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">{goal.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-sm">{goal.title}</p>
+                    <p className="text-white/40 text-xs">
+                      {goalProg.forecastDate ? `Projected finish: ${fmtDate(goalProg.forecastDate)}` : `Target: ${fmtDate(goalProg.targetDate)}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[#57d996] font-black text-lg">{goalProg.percent}%</p>
+                    <p className={`text-[10px] ${goalProg.onTrack ? "text-green-400" : "text-yellow-400"}`}>{goalProg.onTrack ? "on track" : "behind"}</p>
+                  </div>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#57d996] to-[#18c8d8] rounded-full" style={{ width: `${goalProg.percent}%` }} />
+                </div>
+              </Link>
+            ) : (
+              <Link href="/goals" className="flex items-center gap-3 bg-white/5 border border-white/8 border-dashed rounded-2xl p-4 mb-6 hover:border-[#57d996]/30 transition-all">
+                <CalendarCheck size={18} className="text-[#57d996]" />
+                <div className="flex-1">
+                  <p className="text-white font-bold text-sm">Set a Hifz goal</p>
+                  <p className="text-white/40 text-xs">Get a daily plan + an AI completion forecast</p>
+                </div>
+                <ArrowRight size={15} className="text-white/30" />
+              </Link>
+            )}
 
             {/* Level progress */}
             <div className="bg-white/5 border border-white/8 rounded-2xl p-5 mb-6">
