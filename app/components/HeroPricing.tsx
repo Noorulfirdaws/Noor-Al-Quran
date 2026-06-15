@@ -6,10 +6,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const slides = [
   {
     id: 1,
-    headline: ["Memorize", "More."],
-    sub: "AI-powered Quran memorization that detects every mistake in real time.",
-    cta1: { label: "View Plans", href: "#pricing" },
-    cta2: { label: "▶ Try Live Demo", href: "/demo", accent: true },
+    headline: ["Your Personal", "AI Hifz Teacher."],
+    sub: "Listen. Recite. Get instant word-by-word feedback. Memorize faster than ever — available 24/7.",
+    cta1: { label: "Start Free Trial", href: "/signup" },
+    cta2: { label: "▶ Watch Live Demo", href: "/demo", accent: true },
     // Pexels video: Quran in Close Up #10816965
     videoSrcs: [
       "https://videos.pexels.com/video-files/10816965/10816965-hd_1920_1080_30fps.mp4",
@@ -21,10 +21,10 @@ const slides = [
   },
   {
     id: 2,
-    headline: ["Recite", "Perfectly."],
-    sub: "Word-by-word AI feedback as you recite. Know exactly where you made a mistake.",
-    cta1: { label: "See How It Works", href: "/#features" },
-    cta2: { label: "Start Free", href: "/signup", accent: true },
+    headline: ["Instant Mistake", "Detection."],
+    sub: "Every word color-coded in real time — green for correct, red for missed. No guessing, no wasted repetition.",
+    cta1: { label: "How It Works", href: "/#features" },
+    cta2: { label: "Try It Free", href: "/signup", accent: true },
     // Pexels video: Tablet while praying #7953222
     videoSrcs: [
       "https://videos.pexels.com/video-files/7953222/7953222-hd_1920_1080_25fps.mp4",
@@ -35,8 +35,8 @@ const slides = [
   },
   {
     id: 3,
-    headline: ["Reach Your", "Hifz Goals."],
-    sub: "Set a plan, track your progress, and complete your memorization journey with Noor-ul-Quran.",
+    headline: ["Track Your", "Hifz Journey."],
+    sub: "XP, streaks, achievements, and a personal dashboard — stay motivated every single day until you complete your Hifz.",
     cta1: { label: "See Plans", href: "/#pricing" },
     cta2: { label: "▶ Live Demo", href: "/demo", accent: true },
     // Pexels: calm aerial #3214448 (the previous video #6994948 was 403'd by Pexels)
@@ -179,8 +179,21 @@ export default function HeroPricing() {
             </a>
           </div>
 
+          {/* Trust micro-proof */}
+          <div className="flex items-center gap-4 mt-6 flex-wrap">
+            <div className="flex items-center gap-1.5 text-white/45 text-xs">
+              <span style={{ color: slide.accentColor }}>✓</span> Real-time AI feedback
+            </div>
+            <div className="flex items-center gap-1.5 text-white/45 text-xs">
+              <span style={{ color: slide.accentColor }}>✓</span> Word-by-word detection
+            </div>
+            <div className="flex items-center gap-1.5 text-white/45 text-xs">
+              <span style={{ color: slide.accentColor }}>✓</span> No credit card needed
+            </div>
+          </div>
+
           {/* App store badges */}
-          <div className="flex items-center gap-3 mt-6 flex-wrap">
+          <div className="flex items-center gap-3 mt-4 flex-wrap">
             <a href="#" aria-label="Download on the App Store" className="group">
               <div className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 backdrop-blur-sm rounded-xl px-4 py-2.5 transition-all">
                 <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 flex-shrink-0">

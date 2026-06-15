@@ -1,9 +1,9 @@
 const stats = [
-  { value: "500K+", label: "Learners worldwide" },
-  { value: "4.9★", label: "App Store rating" },
-  { value: "114", label: "Surahs supported" },
-  { value: "30+", label: "Languages" },
-  { value: "Free", label: "To get started" },
+  { value: "114", label: "Surahs with AI check" },
+  { value: "21", label: "Elite reciters" },
+  { value: "Real-time", label: "Mistake detection" },
+  { value: "6,236", label: "Ayahs tracked" },
+  { value: "Free", label: "To start today" },
 ];
 
 export default function StatsBar() {

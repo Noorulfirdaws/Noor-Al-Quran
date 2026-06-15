@@ -1,6 +1,7 @@
 import Navbar from "./components/Navbar";
 import HeroPricing from "./components/HeroPricing";
 import StatsBar from "./components/StatsBar";
+import AIFeatureProof from "./components/AIFeatureProof";
 import PricingCards from "./components/PricingCards";
 import PremiumFeatures from "./components/PremiumFeatures";
 import SocialProof from "./components/SocialProof";
@@ -18,6 +19,7 @@ export default function Home() {
       <Navbar />
       <HeroPricing />
       <StatsBar />
+      <AIFeatureProof />
       <PremiumFeatures />
       <SocialProof />
       <PricingCards />

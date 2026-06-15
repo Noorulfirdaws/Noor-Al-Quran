@@ -23,6 +23,7 @@ export default function Navbar() {
     { label: t.navDemo, href: "/demo" },
     { label: "Quran", href: "/quran" },
     { label: t.navPricing, href: "/#pricing" },
+    { label: "Dashboard", href: "/dashboard" },
     { label: t.navBlog, href: "/blog" },
     { label: "Library", href: "/library" },
   ];
