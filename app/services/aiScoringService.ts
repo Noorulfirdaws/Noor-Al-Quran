@@ -9,10 +9,21 @@ export interface TajweedScore {
   details?: string[];                  // per-letter Phase-3 notes (clipped/short madd)
 }
 
+export interface WordAlignment {
+  text: string;
+  status: "correct" | "incorrect" | "missed";
+  confidence: number;
+}
+
 export interface ScoreResult {
   configured: boolean;
   transcript?: string;
   feedback?: string;
+  // Authoritative server-side per-word analysis (real Whisper ASR + NW alignment)
+  accuracy?: number;
+  correct?: number;
+  missed?: number;
+  words?: WordAlignment[];
   tajweedNotes?: string[];
   tajweed?: TajweedScore | null;
   message?: string;

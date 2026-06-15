@@ -91,6 +91,8 @@ export async function POST(req: NextRequest) {
       }
       const data = (await sRes.json()) as {
         transcript?: string; feedback?: string;
+        accuracy?: number; correct?: number; missed?: number; extra?: number;
+        words?: { text: string; status: string; confidence: number }[];
         tajweed?: { available?: boolean; overall?: number | null; categories?: Record<string, number>; note?: string; details?: string[] } | null;
       };
       const tajweedNotes = data.tajweed?.note ? [data.tajweed.note] : [];
@@ -98,7 +100,11 @@ export async function POST(req: NextRequest) {
         ? { overall: data.tajweed.overall ?? null, categories: data.tajweed.categories ?? {}, details: data.tajweed.details ?? [] }
         : null;
       return NextResponse.json(
-        { configured: true, transcript: data.transcript ?? "", feedback: data.feedback ?? "", tajweedNotes, tajweed },
+        {
+          configured: true, transcript: data.transcript ?? "", feedback: data.feedback ?? "",
+          accuracy: data.accuracy, correct: data.correct, missed: data.missed,
+          words: data.words ?? [], tajweedNotes, tajweed,
+        },
         { status: 200 }
       );
     } catch (err) {

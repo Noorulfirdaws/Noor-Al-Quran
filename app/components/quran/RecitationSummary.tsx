@@ -173,7 +173,7 @@ export default function RecitationSummary({
               ) : remaining <= 0 ? (
                 <><Lock size={14} /> Monthly AI feedback used up</>
               ) : (
-                <><Sparkles size={15} className="text-[#18c8d8]" /> Get AI Tajweed Feedback</>
+                <><Sparkles size={15} className="text-[#18c8d8]" /> Verify with AI (accuracy + tajweed)</>
               )}
             </button>
           )}
@@ -184,8 +184,27 @@ export default function RecitationSummary({
           )}
 
           {/* AI result */}
-          {aiResult?.configured && (aiResult.feedback || aiResult.tajweedNotes?.length) ? (
+          {aiResult?.configured && (aiResult.feedback || aiResult.tajweedNotes?.length || aiResult.words?.length) ? (
             <div className="bg-[#18c8d8]/8 border border-[#18c8d8]/20 rounded-xl p-3 mt-1">
+              {/* Authoritative server accuracy (real Whisper ASR + NW alignment) */}
+              {typeof aiResult.accuracy === "number" && (
+                <div className="mb-2 pb-2 border-b border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#18c8d8] font-bold uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles size={11} /> AI-Verified Accuracy
+                    </span>
+                    <span className={`font-black text-sm ${aiResult.accuracy >= 80 ? "text-green-400" : aiResult.accuracy >= 60 ? "text-yellow-400" : "text-red-400"}`}>
+                      {aiResult.accuracy}%
+                    </span>
+                  </div>
+                  {Math.abs(aiResult.accuracy - accuracy) >= 10 && (
+                    <p className="text-white/40 text-[11px] mt-1">
+                      The AI re-analyzed your recording ({aiResult.correct ?? 0} correct, {aiResult.missed ?? 0} missed) —
+                      more accurate than the live estimate of {accuracy}%.
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="text-[10px] text-[#18c8d8] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
                 <Sparkles size={11} /> AI Tajweed Analysis
               </p>
