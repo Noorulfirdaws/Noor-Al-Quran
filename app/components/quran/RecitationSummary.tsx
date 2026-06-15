@@ -223,6 +223,17 @@ export default function RecitationSummary({
                       </div>
                     ))}
                   </div>
+
+                  {/* Phase-3 per-letter notes (which madd was clipped, by how much) */}
+                  {aiResult.tajweed.details && aiResult.tajweed.details.length > 0 && (
+                    <ul className="mt-2.5 space-y-1">
+                      {aiResult.tajweed.details.map((d, i) => (
+                        <li key={i} className="text-white/45 text-[11px] flex items-start gap-1.5">
+                          <span className="text-yellow-400/70 mt-0.5">⚠</span> {d}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>

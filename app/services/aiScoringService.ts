@@ -6,6 +6,7 @@
 export interface TajweedScore {
   overall: number | null;
   categories: Record<string, number>; // e.g. { madd: 88, ghunnah: 92, fluency: 80 }
+  details?: string[];                  // per-letter Phase-3 notes (clipped/short madd)
 }
 
 export interface ScoreResult {
