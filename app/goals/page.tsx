@@ -157,6 +157,19 @@ function GoalDashboard({ goal, progress, onReset }: { goal: ActiveGoal; progress
         </div>
       </div>
 
+      {progress.percent >= 100 && (
+        <Link href="/certificate" className="block mb-4 bg-gradient-to-r from-[#f7ca45]/15 to-[#f7ca45]/5 border border-[#f7ca45]/30 rounded-2xl p-4 hover:border-[#f7ca45]/50 transition-all">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🏆</span>
+            <div className="flex-1">
+              <p className="text-[#f7ca45] font-black text-sm">Goal complete — claim your certificate!</p>
+              <p className="text-white/45 text-xs">A printable, shareable certificate of achievement awaits.</p>
+            </div>
+            <ArrowRight size={16} className="text-[#f7ca45]" />
+          </div>
+        </Link>
+      )}
+
       <Link href="/quran" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
         <Mic size={15} /> Continue Memorizing
       </Link>
