@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, SkipForward, Star, Zap, Trophy, RotateCcw, ChevronRight, Flame } from "lucide-react";
 import { recordSession, coachComment, xpForNextLevel, levelTitle, ACHIEVEMENTS } from "../../services/gamificationService";
 import type { SessionResult } from "../../services/gamificationService";
+import { reviewSurah } from "../../services/revisionService";
 
 interface Props {
   surahNumber: number;
@@ -24,6 +25,7 @@ export default function RecitationSummary({
 
   useEffect(() => {
     const r = recordSession({ surah: surahNumber, ayahsRecited, correct, incorrect, skipped, accuracy });
+    reviewSurah(surahNumber, surahName, accuracy); // schedule next spaced-repetition review
     setResult(r);
     if (r.newAchievements.length > 0) setTimeout(() => setShowAch(true), 800);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

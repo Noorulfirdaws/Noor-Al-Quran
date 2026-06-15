@@ -15,6 +15,7 @@ import WordPanel from "./WordPanel";
 import MemorizationPanel from "./MemorizationPanel";
 import PremiumGate from "./PremiumGate";
 import RecitationSummary from "./RecitationSummary";
+import { recordMistake } from "../../services/gamificationService";
 import type { ReaderMode } from "../../types/quran";
 
 interface Props {
@@ -119,14 +120,25 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     setMode(m);
   }, [isFeatureAllowed, surahNumber, setMode]);
 
-  // Show summary once when recitation completes
+  // Show summary once when recitation completes + record per-ayah mistakes
   useEffect(() => {
     if (reciteDone && !summaryShownRef.current) {
       summaryShownRef.current = true;
+      // Record which ayahs had mistakes (incorrect/skipped words) so the
+      // dashboard's struggle detection can surface the weakest verses.
+      const name = surahMeta?.englishName ?? `Surah ${surahNumber}`;
+      ayahs.forEach((a) => {
+        const off = ayahWordOffsets.get(a.numberInSurah) ?? 0;
+        const aw = ayahsWithWords.find((x) => x.numberInSurah === a.numberInSurah);
+        const len = aw ? aw.words.length : a.text.split(/\s+/).filter(Boolean).length;
+        const slice = reciteWordStatuses.slice(off, off + len);
+        const hadMistake = slice.some((s) => s === "incorrect" || s === "skipped");
+        if (hadMistake) recordMistake(surahNumber, a.numberInSurah, name);
+      });
       setTimeout(() => setShowSummary(true), 600);
     }
     if (!reciteDone) { summaryShownRef.current = false; setShowSummary(false); }
-  }, [reciteDone]);
+  }, [reciteDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Count how many ayahs were touched during this recitation
   const ayahsRecited = useCallback((): number => {

@@ -146,6 +146,9 @@ export default function DashboardPage() {
           <Link href="/quran/1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
             <Mic size={15} /> Start Reciting
           </Link>
+          <Link href="/revision" className="inline-flex items-center gap-2 bg-white/8 border border-white/10 text-white/70 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/12 transition-all">
+            <Target size={15} /> Revision Planner
+          </Link>
           <Link href="/quran" className="inline-flex items-center gap-2 bg-white/8 border border-white/10 text-white/70 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/12 transition-all">
             <BookOpen size={15} /> Browse Surahs
           </Link>
