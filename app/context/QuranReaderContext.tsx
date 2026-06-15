@@ -67,6 +67,7 @@ interface ReaderCtx {
   speechSupported: boolean;
   isReciting: boolean;
   reciteWordStatuses: WordStatus[];   // flat array, one per word across whole surah
+  reciteWordConfidences: number[];    // 0..1 per word; low-confidence errors = "possible"
   reciteWordCursor: number;
   reciteDone: boolean;
   reciteInterim: string;
@@ -102,6 +103,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
   useEffect(() => { setSpeechSupported(isSpeechSupported()); }, []);
   const [isReciting, setIsReciting] = useState(false);
   const [reciteWordStatuses, setReciteWordStatuses] = useState<WordStatus[]>([]);
+  const [reciteWordConfidences, setReciteWordConfidences] = useState<number[]>([]);
+  const reciteConfidencesRef = useRef<number[]>([]);
   const [reciteWordCursor, setReciteWordCursor] = useState(0);
   const [reciteDone, setReciteDone] = useState(false);
   const [reciteInterim, setReciteInterim] = useState("");
@@ -200,6 +203,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         i === 0 ? "current" : "idle"
       );
       reciteStatusesRef.current = initialStatuses;
+      reciteConfidencesRef.current = new Array(words.length).fill(0);
+      setReciteWordConfidences(reciteConfidencesRef.current);
       reciteCursorRef.current = 0;
       reciteStatsRef.current = { correct: 0, incorrect: 0, skipped: 0, accuracy: 0 };
       setReciteWordStatuses(initialStatuses);
@@ -246,6 +251,15 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
         advanceCursor(best.statuses, best.cursor);
 
+        // Merge this round's per-word confidence into the persistent array.
+        const conf = reciteConfidencesRef.current.slice();
+        if (conf.length !== best.confidences.length) conf.length = best.confidences.length;
+        for (let k = 0; k < best.confidences.length; k++) {
+          if (best.confidences[k] > 0) conf[k] = best.confidences[k];
+        }
+        reciteConfidencesRef.current = conf;
+        setReciteWordConfidences(conf);
+
         // Completion engine: finalize ONLY when the end of the surah has truly
         // been reached (last word resolved), never just because a cursor ran off
         // the end. This prevents both premature finalization and hanging.
@@ -288,9 +302,11 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     stopReciting();
     reciteWordsRef.current = [];
     reciteStatusesRef.current = [];
+    reciteConfidencesRef.current = [];
     reciteCursorRef.current = 0;
     reciteStatsRef.current = { correct: 0, incorrect: 0, skipped: 0, accuracy: 0 };
     setReciteWordStatuses([]);
+    setReciteWordConfidences([]);
     setReciteWordCursor(0);
     setReciteStats({ correct: 0, incorrect: 0, skipped: 0, accuracy: 0 });
     setReciteDone(false);
@@ -653,7 +669,7 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       selectedWord, setSelectedWord,
       highlightedAyah, setHighlightedAyah,
       revealedWords, revealWord, revealAll, hideAll,
-      speechSupported, isReciting, reciteWordStatuses, reciteWordCursor,
+      speechSupported, isReciting, reciteWordStatuses, reciteWordConfidences, reciteWordCursor,
       reciteDone, reciteInterim, reciteStats,
       startReciting, stopReciting, resetRecite,
     }}>

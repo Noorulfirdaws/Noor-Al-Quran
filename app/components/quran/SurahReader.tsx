@@ -29,7 +29,7 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     surahMeta, ayahs, ayahsWithWords, loadingAyahs, loadingWords, errorMsg,
     loadSurah, loadWords, mode, setMode,
     highlightedAyah, setSelectedWord, settings, updateSettings,
-    speechSupported, isReciting, reciteWordStatuses, reciteWordCursor,
+    speechSupported, isReciting, reciteWordStatuses, reciteWordConfidences, reciteWordCursor,
     reciteDone, reciteInterim, reciteStats, startReciting, stopReciting, resetRecite,
   } = useQuranReader();
   const { isFeatureAllowed } = usePremium();
@@ -485,6 +485,7 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
                 isRecite={showRecite}
                 reciteWordOffset={wordOffset}
                 reciteWordStatuses={reciteWordStatuses}
+                reciteWordConfidences={reciteWordConfidences}
                 reciteWordCursor={reciteWordCursor}
               />
             );

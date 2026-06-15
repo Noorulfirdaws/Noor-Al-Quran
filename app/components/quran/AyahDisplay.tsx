@@ -25,13 +25,14 @@ interface Props {
   isRecite?: boolean;
   reciteWordOffset?: number;
   reciteWordStatuses?: WordStatus[];
+  reciteWordConfidences?: number[];
   reciteWordCursor?: number;
 }
 
 export default function AyahDisplay({
   ayah, ayahWithWords, surahNumber, surahName,
   isHighlighted, isWordByWord, isMemorization,
-  isRecite = false, reciteWordOffset = 0, reciteWordStatuses = [], reciteWordCursor = 0,
+  isRecite = false, reciteWordOffset = 0, reciteWordStatuses = [], reciteWordConfidences = [], reciteWordCursor = 0,
 }: Props) {
   const { settings, playAyah, selectedWord, setSelectedWord, setHighlightedAyah, revealedWords, revealWord } =
     useQuranReader();
@@ -135,9 +136,14 @@ export default function AyahDisplay({
           {rawWords.map((wordText, i) => {
             const flatIdx = reciteWordOffset + i;
             const status: WordStatus = reciteWordStatuses[flatIdx] ?? "idle";
+            const confidence = reciteWordConfidences[flatIdx] ?? 0;
             const isCurrent = flatIdx === reciteWordCursor && status === "current";
+            // A low-confidence "incorrect" is shown as a softer "possible mistake"
+            // (amber, dotted) rather than a hard red error — fewer false alarms.
+            const possible = status === "incorrect" && confidence < 0.55;
             const colorClass =
               status === "correct"   ? "text-green-400 bg-green-400/10"
+              : possible               ? "text-amber-400 bg-amber-400/10 ring-1 ring-amber-400/30 ring-dashed"
               : status === "incorrect" ? "text-red-400 bg-red-400/10"
               : status === "skipped"   ? "text-yellow-400 bg-yellow-400/10"
               : isCurrent              ? "text-white bg-[#57d996]/20 ring-1 ring-[#57d996]/50 shadow-[0_0_10px_rgba(87,217,150,0.3)]"
@@ -145,6 +151,7 @@ export default function AyahDisplay({
             return (
               <span
                 key={i}
+                title={possible ? "Possible mistake" : status === "incorrect" ? "Mistake detected" : status === "skipped" ? "Skipped" : undefined}
                 className={`inline-block mx-1 rounded px-0.5 transition-all duration-300 ${colorClass}`}
               >
                 {wordText}
