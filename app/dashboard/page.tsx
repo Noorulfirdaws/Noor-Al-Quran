@@ -6,6 +6,8 @@ import {
   loadGamification, xpForNextLevel, levelTitle, ACHIEVEMENTS,
   getStruggles, dailyCoachTip, type GamificationState,
 } from "../services/gamificationService";
+import MemorizationHeatmap from "../components/quran/MemorizationHeatmap";
+import HifzTimeline from "../components/quran/HifzTimeline";
 import { Flame, Zap, Trophy, Star, BookOpen, Target, TrendingUp, BarChart3, ArrowRight, Mic, Lock } from "lucide-react";
 
 export default function DashboardPage() {
@@ -124,6 +126,16 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* Memorization heatmap */}
+            <div className="mb-6">
+              <MemorizationHeatmap />
+            </div>
+
+            {/* Hifz journey timeline */}
+            <div className="mb-6">
+              <HifzTimeline />
+            </div>
 
             {/* Achievements */}
             <AchievementsGrid unlocked={state.unlockedAchievements} />

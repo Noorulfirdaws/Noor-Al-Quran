@@ -233,6 +233,79 @@ export function getStruggles(limit = 5): StruggleEntry[] {
 
 // ─── Coach comment generator ──────────────────────────────────────────────────
 
+// ─── Hifz Journey timeline ────────────────────────────────────────────────────
+// Derives a chronological list of milestones from session history + achievements.
+
+export interface Milestone {
+  date: string;        // YYYY-MM-DD (or "" for future/locked)
+  title: string;
+  desc: string;
+  icon: string;
+  done: boolean;
+}
+
+export function hifzJourney(): Milestone[] {
+  const s = loadGamification();
+  const ordered = [...s.sessions].sort((a, b) => a.date.localeCompare(b.date)); // oldest first
+  const firstDate = ordered[0]?.date ?? "";
+  const distinctSurahs = new Set(s.sessions.map((x) => x.surah));
+  const firstPerfect = ordered.find((x) => x.accuracy === 100);
+  const lvl = levelFromXp(s.totalXp);
+
+  const ms: Milestone[] = [
+    {
+      date: firstDate,
+      title: "Started your Hifz journey",
+      desc: "Your first AI-checked recitation",
+      icon: "🌱",
+      done: s.totalSessions >= 1,
+    },
+    {
+      date: firstPerfect?.date ?? "",
+      title: "First perfect recitation",
+      desc: "100% accuracy on an ayah",
+      icon: "✨",
+      done: s.perfectSessions >= 1,
+    },
+    {
+      date: s.currentStreak >= 7 || s.longestStreak >= 7 ? (s.lastActiveDate ?? "") : "",
+      title: "7-day streak",
+      desc: "A full week of daily practice",
+      icon: "🔥",
+      done: s.longestStreak >= 7,
+    },
+    {
+      date: distinctSurahs.size >= 5 ? (s.lastActiveDate ?? "") : "",
+      title: "5 surahs practiced",
+      desc: "Building real breadth",
+      icon: "📖",
+      done: distinctSurahs.size >= 5,
+    },
+    {
+      date: lvl >= 5 ? (s.lastActiveDate ?? "") : "",
+      title: "Reached Level 5",
+      desc: `${levelTitle(5)} — momentum is building`,
+      icon: "📚",
+      done: lvl >= 5,
+    },
+    {
+      date: "",
+      title: "Completed Juz Amma",
+      desc: "All 37 surahs of the 30th Juz",
+      icon: "🕌",
+      done: false,
+    },
+    {
+      date: "",
+      title: "Completed your Hifz",
+      desc: "The full Quran, memorized — bi'idhnillah",
+      icon: "🏆",
+      done: false,
+    },
+  ];
+  return ms;
+}
+
 // ─── Daily AI coach guidance (dashboard banner) ───────────────────────────────
 // Synthesizes streak, recent accuracy, and struggles into one actionable nudge.
 

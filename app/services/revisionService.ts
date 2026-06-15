@@ -133,6 +133,34 @@ export function formatDue(nextReview: number): string {
   return `In ${Math.ceil(days / 30)} months`;
 }
 
+// ─── Memorization map ─────────────────────────────────────────────────────────
+// Per-surah strength for the whole-Quran heatmap. Strength decays with time
+// (uses currentRetention), so surahs not revised recently fade from green→red.
+
+export type SurahStrength = "none" | "weak" | "review" | "strong";
+
+export function surahStrengthMap(): Record<number, { strength: SurahStrength; retention: number; name: string }> {
+  const cards = load();
+  const out: Record<number, { strength: SurahStrength; retention: number; name: string }> = {};
+  for (const card of Object.values(cards)) {
+    const r = currentRetention(card);
+    const strength: SurahStrength = r >= 70 ? "strong" : r >= 40 ? "review" : "weak";
+    out[card.surah] = { strength, retention: r, name: card.surahName };
+  }
+  return out;
+}
+
+export function memorizationStats(): { started: number; strong: number; review: number; weak: number } {
+  const map = surahStrengthMap();
+  const vals = Object.values(map);
+  return {
+    started: vals.length,
+    strong: vals.filter((v) => v.strength === "strong").length,
+    review: vals.filter((v) => v.strength === "review").length,
+    weak: vals.filter((v) => v.strength === "weak").length,
+  };
+}
+
 // ─── Goal generator ───────────────────────────────────────────────────────────
 
 export interface HifzGoal {
