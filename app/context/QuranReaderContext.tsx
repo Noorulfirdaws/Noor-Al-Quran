@@ -9,6 +9,7 @@ import { DEFAULT_SETTINGS } from "../types/quran";
 import { getSurah, getWordsForSurah } from "../services/quranService";
 import { getAyahAudioUrl, getFallbackAyahAudioUrl, getReciterById } from "../services/audioService";
 import { saveProgress } from "../services/bookmarkService";
+import { logRecitation } from "../services/recitationLog";
 import {
   type WordStatus, splitWords,
   alignRecitation, type AlignResult,
@@ -173,11 +174,18 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
       const stats = recalcStats(resolved);
       reciteStatsRef.current = stats;
       setReciteStats(stats);
+      const comp = recitationCompletion(resolved, reciteCursorRef.current, total);
+      logRecitation({
+        surah: surahMeta?.number ?? 0, totalWords: total,
+        correct: stats.correct, incorrect: stats.incorrect, skipped: stats.skipped,
+        accuracy: stats.accuracy, completionScore: comp.score,
+        reachedEnd: comp.reachedEnd, finalizeReason: "fallback",
+      });
       setReciteDone(true);
       setIsReciting(false);
       reciteHandleRef.current?.stop();
     }, 6000);
-  }, [clearCompletionTimer]);
+  }, [clearCompletionTimer, surahMeta]);
 
   const startReciting = useCallback(() => {
     if (!isSpeechSupported()) return;
@@ -268,6 +276,13 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         );
         if (completion.complete) {
           clearCompletionTimer();
+          const st = reciteStatsRef.current;
+          logRecitation({
+            surah: surahMeta?.number ?? 0, totalWords: allWords.length,
+            correct: st.correct, incorrect: st.incorrect, skipped: st.skipped,
+            accuracy: st.accuracy, completionScore: completion.score,
+            reachedEnd: completion.reachedEnd, finalizeReason: "completed",
+          });
           setReciteDone(true);
           setIsReciting(false);
           reciteHandleRef.current?.stop();
@@ -288,7 +303,7 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
     reciteHandleRef.current = handle;
     handle.start();
-  }, [ayahs, ayahsWithWords, advanceCursor, clearCompletionTimer, armCompletionFallback]);
+  }, [ayahs, ayahsWithWords, advanceCursor, clearCompletionTimer, armCompletionFallback, surahMeta]);
 
   const stopReciting = useCallback(() => {
     clearCompletionTimer();
