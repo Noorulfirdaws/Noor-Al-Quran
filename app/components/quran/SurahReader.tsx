@@ -14,6 +14,7 @@ import ReaderSettings from "./ReaderSettings";
 import WordPanel from "./WordPanel";
 import MemorizationPanel from "./MemorizationPanel";
 import PremiumGate from "./PremiumGate";
+import RecitationSummary from "./RecitationSummary";
 import type { ReaderMode } from "../../types/quran";
 
 interface Props {
@@ -33,6 +34,8 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showReciterMenu, setShowReciterMenu] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const summaryShownRef = useRef(false);
   const reciterMenuRef = useRef<HTMLDivElement>(null);
   const scrolledRef = useRef(false);
 
@@ -115,6 +118,27 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     if (feature && !isFeatureAllowed(feature, surahNumber)) return;
     setMode(m);
   }, [isFeatureAllowed, surahNumber, setMode]);
+
+  // Show summary once when recitation completes
+  useEffect(() => {
+    if (reciteDone && !summaryShownRef.current) {
+      summaryShownRef.current = true;
+      setTimeout(() => setShowSummary(true), 600);
+    }
+    if (!reciteDone) { summaryShownRef.current = false; setShowSummary(false); }
+  }, [reciteDone]);
+
+  // Count how many ayahs were touched during this recitation
+  const ayahsRecited = useCallback((): number => {
+    if (reciteWordStatuses.length === 0) return 0;
+    let count = 0;
+    ayahs.forEach(a => {
+      const off = ayahWordOffsets.get(a.numberInSurah) ?? 0;
+      const touched = reciteWordStatuses.slice(off).some(s => s !== "idle");
+      if (touched) count++;
+    });
+    return Math.max(1, count);
+  }, [reciteWordStatuses, ayahs, ayahWordOffsets]);
 
   const currentReciter = RECITERS.find(r => r.id === settings.reciterId) ?? RECITERS[0];
   const murattalReciters = RECITERS.filter(r => r.style === "murattal");
@@ -464,6 +488,20 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
 
       {showSettings && (
         <ReaderSettings surahNumber={surahNumber} onClose={() => setShowSettings(false)} />
+      )}
+
+      {showSummary && surahMeta && (
+        <RecitationSummary
+          surahNumber={surahNumber}
+          surahName={surahMeta.englishName}
+          correct={reciteStats.correct}
+          incorrect={reciteStats.incorrect}
+          skipped={reciteStats.skipped}
+          accuracy={reciteStats.accuracy}
+          ayahsRecited={ayahsRecited()}
+          onReset={() => { setShowSummary(false); resetRecite(); }}
+          onClose={() => setShowSummary(false)}
+        />
       )}
     </div>
   );
