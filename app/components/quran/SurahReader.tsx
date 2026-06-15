@@ -16,6 +16,7 @@ import MemorizationPanel from "./MemorizationPanel";
 import PremiumGate from "./PremiumGate";
 import RecitationSummary from "./RecitationSummary";
 import { recordMistake } from "../../services/gamificationService";
+import { RecitationRecorder, saveRecording, isRecordingSupported } from "../../services/recordingService";
 import type { ReaderMode } from "../../types/quran";
 
 interface Props {
@@ -37,6 +38,8 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
   const [showReciterMenu, setShowReciterMenu] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const summaryShownRef = useRef(false);
+  const recorderRef = useRef<RecitationRecorder | null>(null);
+  const recordingActiveRef = useRef(false);
   const reciterMenuRef = useRef<HTMLDivElement>(null);
   const scrolledRef = useRef(false);
 
@@ -120,10 +123,58 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     setMode(m);
   }, [isFeatureAllowed, surahNumber, setMode]);
 
+  // Start/stop audio capture alongside speech recognition.
+  useEffect(() => {
+    if (mode !== "recite" || !isRecordingSupported()) return;
+    if (isReciting && !recordingActiveRef.current) {
+      recordingActiveRef.current = true;
+      const rec = new RecitationRecorder();
+      recorderRef.current = rec;
+      rec.start().catch(() => { recordingActiveRef.current = false; recorderRef.current = null; });
+    }
+  }, [isReciting, mode]);
+
+  // Release the mic if the user navigates away mid-recitation (discard clip).
+  useEffect(() => {
+    return () => {
+      if (recordingActiveRef.current && recorderRef.current) {
+        recorderRef.current.stop().catch(() => {});
+        recordingActiveRef.current = false;
+        recorderRef.current = null;
+      }
+    };
+  }, []);
+
+  // Save the recording when recitation completes.
+  const saveRecitingClip = useCallback(async () => {
+    const rec = recorderRef.current;
+    if (!rec || !recordingActiveRef.current) return;
+    recordingActiveRef.current = false;
+    recorderRef.current = null;
+    try {
+      const out = await rec.stop();
+      if (!out || !surahMeta) return;
+      await saveRecording({
+        id: `${surahNumber}-${Date.now()}`,
+        surah: surahNumber,
+        surahName: surahMeta.englishName,
+        date: Date.now(),
+        durationMs: out.durationMs,
+        accuracy: reciteStats.accuracy,
+        correct: reciteStats.correct,
+        incorrect: reciteStats.incorrect,
+        skipped: reciteStats.skipped,
+        blob: out.blob,
+        mimeType: out.mimeType,
+      });
+    } catch { /* ignore — recording is best-effort */ }
+  }, [surahMeta, surahNumber, reciteStats]);
+
   // Show summary once when recitation completes + record per-ayah mistakes
   useEffect(() => {
     if (reciteDone && !summaryShownRef.current) {
       summaryShownRef.current = true;
+      saveRecitingClip();
       // Record which ayahs had mistakes (incorrect/skipped words) so the
       // dashboard's struggle detection can surface the weakest verses.
       const name = surahMeta?.englishName ?? `Surah ${surahNumber}`;
