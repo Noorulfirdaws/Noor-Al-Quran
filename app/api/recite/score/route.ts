@@ -12,10 +12,14 @@ import { NextRequest, NextResponse } from "next/server";
  * month). This route is the spend surface, so it also refuses to run unless a
  * key is configured, keeping spend at exactly $0 until you opt in.
  *
- * ── Setup (when you're ready) ────────────────────────────────────────────────
- *   Set ONE env var on Railway (or .env.local for local dev):
- *     OPENAI_API_KEY=sk-...
- *   No code change needed — drop the key in and this route goes live.
+ * ── Setup (two ways, pick one — no code change for either) ───────────────────
+ *   A) Self-hosted shared service (flat cost, recommended):
+ *        SCORING_SERVICE_URL=https://quran-scoring.up.railway.app
+ *        SCORING_API_TOKEN=<same secret as the service>
+ *   B) Hosted OpenAI (per-request cost):
+ *        OPENAI_API_KEY=sk-...
+ *   If both are set, the self-hosted service wins. If neither, this route
+ *   returns configured:false and costs $0 (free on-device engine still works).
  *
  * Request: multipart/form-data
  *   audio:    Blob   (the recitation clip)
@@ -31,16 +35,18 @@ export const runtime = "nodejs";
 const OPENAI = "https://api.openai.com/v1";
 
 export async function POST(req: NextRequest) {
+  const serviceUrl = process.env.SCORING_SERVICE_URL;
+  const serviceToken = process.env.SCORING_API_TOKEN;
   const key = process.env.OPENAI_API_KEY;
 
-  // Hard guard: no key → no spend. UI falls back to the free on-device engine.
-  if (!key) {
+  // Hard guard: nothing configured → no spend. UI falls back to free on-device.
+  if (!serviceUrl && !key) {
     return NextResponse.json(
       {
         configured: false,
         message:
-          "AI scoring is not configured yet. Add OPENAI_API_KEY to enable hosted tajweed feedback. " +
-          "The free on-device word-by-word engine is unaffected.",
+          "AI scoring is not configured yet. Set SCORING_SERVICE_URL (self-hosted) or OPENAI_API_KEY " +
+          "to enable hosted tajweed feedback. The free on-device word-by-word engine is unaffected.",
       },
       { status: 200 }
     );
@@ -66,6 +72,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Audio too large (max 25 MB)." }, { status: 413 });
   }
 
+  // ── Path A: self-hosted shared scoring service (flat cost) — wins if set ──
+  if (serviceUrl) {
+    try {
+      const fwd = new FormData();
+      fwd.append("audio", audio, "recitation.webm");
+      fwd.append("expected", expected);
+      fwd.append("surah", surah);
+      fwd.append("ayah", ayah);
+      const sRes = await fetch(`${serviceUrl.replace(/\/$/, "")}/v1/score`, {
+        method: "POST",
+        headers: serviceToken ? { Authorization: `Bearer ${serviceToken}` } : undefined,
+        body: fwd,
+      });
+      if (!sRes.ok) {
+        const detail = await sRes.text().catch(() => "");
+        return NextResponse.json({ error: "Scoring service error.", detail: detail.slice(0, 300) }, { status: 502 });
+      }
+      const data = (await sRes.json()) as {
+        transcript?: string; feedback?: string; tajweed?: { note?: string } | null;
+      };
+      const tajweedNotes = data.tajweed?.note ? [data.tajweed.note] : [];
+      return NextResponse.json(
+        { configured: true, transcript: data.transcript ?? "", feedback: data.feedback ?? "", tajweedNotes },
+        { status: 200 }
+      );
+    } catch (err) {
+      return NextResponse.json(
+        { error: "Could not reach scoring service.", detail: err instanceof Error ? err.message : "unknown" },
+        { status: 502 }
+      );
+    }
+  }
+
+  // ── Path B: hosted OpenAI (per-request cost) ──
   try {
     // ── 1. Transcribe with Whisper (Arabic) ──
     const whisperForm = new FormData();
