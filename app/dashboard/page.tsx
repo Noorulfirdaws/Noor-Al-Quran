@@ -216,6 +216,9 @@ export default function DashboardPage() {
           <Link href="/recordings" className="inline-flex items-center gap-2 bg-white/8 border border-white/10 text-white/70 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/12 transition-all">
             <Mic size={15} /> My Recordings
           </Link>
+          <Link href="/report" className="inline-flex items-center gap-2 bg-white/8 border border-white/10 text-white/70 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/12 transition-all">
+            <Trophy size={15} /> Share Progress
+          </Link>
           <Link href="/quran" className="inline-flex items-center gap-2 bg-white/8 border border-white/10 text-white/70 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/12 transition-all">
             <BookOpen size={15} /> Browse Surahs
           </Link>
