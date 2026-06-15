@@ -8,6 +8,7 @@ import { usePremium } from "../../context/PremiumContext";
 import { canScore, consumeQuota, quotaRemaining, quotaLimit } from "../../services/quotaService";
 import { scoreRecitation, type ScoreResult } from "../../services/aiScoringService";
 import { listRecordings, getRecording } from "../../services/recordingService";
+import { isWhisperSupported, analyzeWithWhisper, type WhisperProgress } from "../../services/whisperService";
 
 interface Props {
   surahNumber: number;
@@ -29,10 +30,12 @@ export default function RecitationSummary({
   const [result, setResult] = useState<SessionResult | null>(null);
   const [showAch, setShowAch] = useState(false);
 
-  // Hosted AI tajweed feedback (on-demand — only spends when the user clicks).
+  // AI verification (on-demand). Primary path is in-browser Whisper (free, no
+  // quota); falls back to the hosted service only if Whisper isn't supported.
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<ScoreResult | null>(null);
   const [remaining, setRemaining] = useState<number>(0);
+  const [whisperMsg, setWhisperMsg] = useState<string>("");
 
   useEffect(() => {
     const r = recordSession({ surah: surahNumber, ayahsRecited, correct, incorrect, skipped, accuracy });
@@ -42,25 +45,54 @@ export default function RecitationSummary({
     if (r.newAchievements.length > 0) setTimeout(() => setShowAch(true), 800);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const onWhisperProgress = (p: WhisperProgress) => {
+    if (p.status === "transcribing") setWhisperMsg("Analyzing your recitation…");
+    else if (p.status === "ready") setWhisperMsg("");
+    else if (typeof p.progress === "number") setWhisperMsg(`Downloading AI model… ${p.progress}% (one-time)`);
+    else setWhisperMsg("Loading AI model…");
+  };
+
   const getAiFeedback = async () => {
-    if (!canScore(isPremium)) { setRemaining(0); return; }
     setAiLoading(true);
+    setWhisperMsg("");
     try {
-      // Use the most recent recording for this surah as the audio source.
+      // Fetch the latest recording for this surah (the audio source).
       const all = await listRecordings();
       const latest = all.find((r) => r.surah === surahNumber) ?? all[0];
-      if (!latest) { setAiResult({ configured: false, message: "No recording found for this session." }); return; }
+      if (!latest) { setAiResult({ configured: false, message: "No recording found — try reciting again." }); return; }
       const full = await getRecording(latest.id);
       if (!full) { setAiResult({ configured: false, message: "Recording unavailable." }); return; }
+
+      // ── Primary: in-browser Whisper (free, accurate, no quota) ──
+      if (isWhisperSupported()) {
+        const w = await analyzeWithWhisper(full.blob, expectedText, onWhisperProgress);
+        setWhisperMsg("");
+        if (w.ok) {
+          setAiResult({
+            configured: true,
+            transcript: w.transcript,
+            accuracy: w.accuracy,
+            correct: w.correct,
+            missed: w.missed,
+            words: w.words,
+            feedback: "",
+          });
+          return;
+        }
+        // Whisper failed — fall through to the hosted service if available.
+      }
+
+      // ── Fallback: hosted service (quota-limited) ──
+      if (!canScore(isPremium)) { setRemaining(0); setAiResult({ configured: false, message: "AI verification unavailable on this device." }); return; }
       const res = await scoreRecitation(full.blob, expectedText, surahNumber, 1);
-      // Only consume a quota unit when the API actually did paid work.
       if (res.configured && res.transcript !== undefined) {
         consumeQuota(isPremium);
         setRemaining(quotaRemaining(isPremium));
       }
       setAiResult(res);
     } catch {
-      setAiResult({ configured: false, error: "Could not reach the scoring service." });
+      setWhisperMsg("");
+      setAiResult({ configured: false, error: "AI verification failed. Your live feedback above still stands." });
     } finally {
       setAiLoading(false);
     }
@@ -160,26 +192,24 @@ export default function RecitationSummary({
           </div>
         </div>
 
-        {/* Hosted AI Tajweed Feedback (on-demand, quota-limited) */}
+        {/* AI verification — in-browser Whisper (free, accurate) */}
         <div className="px-6 py-4 border-b border-white/5">
           {!aiResult && (
             <button
               onClick={getAiFeedback}
-              disabled={aiLoading || remaining <= 0}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#18c8d8]/15 to-[#57d996]/15 border border-[#18c8d8]/30 hover:border-[#18c8d8]/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+              disabled={aiLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#18c8d8]/15 to-[#57d996]/15 border border-[#18c8d8]/30 hover:border-[#18c8d8]/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
             >
               {aiLoading ? (
-                <><Loader2 size={15} className="animate-spin" /> Analyzing your recitation…</>
-              ) : remaining <= 0 ? (
-                <><Lock size={14} /> Monthly AI feedback used up</>
+                <><Loader2 size={15} className="animate-spin" /> {whisperMsg || "Analyzing…"}</>
               ) : (
-                <><Sparkles size={15} className="text-[#18c8d8]" /> Verify with AI (accuracy + tajweed)</>
+                <><Sparkles size={15} className="text-[#18c8d8]" /> Verify with AI (real Whisper)</>
               )}
             </button>
           )}
-          {!aiResult && remaining > 0 && (
+          {!aiResult && !aiLoading && (
             <p className="text-white/30 text-[10px] text-center mt-1.5">
-              {remaining} of {quotaLimit(isPremium)} AI analyses left this month{!isPremium && " · Premium gets 50"}
+              Runs a real speech-AI on your recording, in your browser — more accurate than the live check. First use downloads the model once.
             </p>
           )}
 

@@ -15,15 +15,17 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com",
+      // 'wasm-unsafe-eval' + blob: are needed for in-browser Whisper (transformers.js / onnxruntime-web WASM + workers).
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.youtube.com https://s.ytimg.com https://cdn.jsdelivr.net",
+      "worker-src 'self' blob:",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://images.pexels.com https://images.unsplash.com",
       // Allow Quran audio CDN + word-level audio + Pexels video
       "media-src 'self' blob: https://cdn.islamic.network https://audio.qurancdn.com https://videos.pexels.com https://*.pexels.com https://player.vimeo.com https://*.vimeocdn.com https://everyayah.com",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
-      // Allow Quran API calls from browser (word-by-word proxy fallback) + fonts
-      "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://api.alquran.cloud https://api.quran.com https://cdn.islamic.network https://audio.qurancdn.com https://everyayah.com",
+      // connect-src: Quran APIs + Hugging Face model download (in-browser Whisper) + WASM CDN
+      "connect-src 'self' blob: https://fonts.googleapis.com https://fonts.gstatic.com https://api.alquran.cloud https://api.quran.com https://cdn.islamic.network https://audio.qurancdn.com https://everyayah.com https://huggingface.co https://*.huggingface.co https://cdn.jsdelivr.net",
     ].join("; "),
   },
 ];
