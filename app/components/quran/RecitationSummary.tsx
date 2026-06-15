@@ -199,6 +199,32 @@ export default function RecitationSummary({
                   ))}
                 </ul>
               )}
+
+              {/* Acoustic tajweed category scores */}
+              {aiResult.tajweed && Object.keys(aiResult.tajweed.categories).length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  {aiResult.tajweed.overall != null && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Tajweed Score</span>
+                      <span className="text-[#18c8d8] font-black text-sm">{aiResult.tajweed.overall}%</span>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    {Object.entries(aiResult.tajweed.categories).map(([name, score]) => (
+                      <div key={name} className="flex items-center gap-2">
+                        <span className="text-white/45 text-[11px] capitalize w-16 flex-shrink-0">{name}</span>
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${score >= 80 ? "bg-green-400" : score >= 60 ? "bg-yellow-400" : "bg-red-400"}`}
+                            style={{ width: `${score}%` }}
+                          />
+                        </div>
+                        <span className="text-white/50 text-[10px] font-mono w-8 text-right">{score}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : aiResult && !aiResult.configured ? (
             <div className="bg-white/5 border border-white/10 rounded-xl p-3 mt-1">

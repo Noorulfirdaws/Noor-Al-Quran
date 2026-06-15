@@ -90,11 +90,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Scoring service error.", detail: detail.slice(0, 300) }, { status: 502 });
       }
       const data = (await sRes.json()) as {
-        transcript?: string; feedback?: string; tajweed?: { note?: string } | null;
+        transcript?: string; feedback?: string;
+        tajweed?: { available?: boolean; overall?: number | null; categories?: Record<string, number>; note?: string } | null;
       };
       const tajweedNotes = data.tajweed?.note ? [data.tajweed.note] : [];
+      const tajweed = data.tajweed?.available
+        ? { overall: data.tajweed.overall ?? null, categories: data.tajweed.categories ?? {} }
+        : null;
       return NextResponse.json(
-        { configured: true, transcript: data.transcript ?? "", feedback: data.feedback ?? "", tajweedNotes },
+        { configured: true, transcript: data.transcript ?? "", feedback: data.feedback ?? "", tajweedNotes, tajweed },
         { status: 200 }
       );
     } catch (err) {

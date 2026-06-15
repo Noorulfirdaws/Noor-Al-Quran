@@ -3,11 +3,17 @@
 // (and costs nothing) until OPENAI_API_KEY is set, so the UI can always call
 // it safely and fall back to the free on-device engine.
 
+export interface TajweedScore {
+  overall: number | null;
+  categories: Record<string, number>; // e.g. { madd: 88, ghunnah: 92, fluency: 80 }
+}
+
 export interface ScoreResult {
   configured: boolean;
   transcript?: string;
   feedback?: string;
   tajweedNotes?: string[];
+  tajweed?: TajweedScore | null;
   message?: string;
   error?: string;
 }
