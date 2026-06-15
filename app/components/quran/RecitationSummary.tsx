@@ -203,6 +203,33 @@ export default function RecitationSummary({
                       more accurate than the live estimate of {accuracy}%.
                     </p>
                   )}
+
+                  {/* Authoritative per-word mistake list (the teacher-grade detail) */}
+                  {aiResult.words && aiResult.words.some((w) => w.status !== "correct") && (
+                    <div className="mt-2">
+                      <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">Words to review</p>
+                      <div className="flex flex-wrap gap-1.5" dir="rtl">
+                        {aiResult.words.filter((w) => w.status !== "correct").slice(0, 14).map((w, i) => (
+                          <span
+                            key={i}
+                            title={`${w.status === "missed" ? "Missed / skipped" : "Mispronounced"} · ${Math.round(w.confidence * 100)}% confidence`}
+                            className={`inline-block px-2 py-0.5 rounded-lg text-base font-bold ${
+                              w.status === "missed"
+                                ? "text-yellow-400 bg-yellow-400/10 ring-1 ring-yellow-400/25"
+                                : "text-red-400 bg-red-400/10 ring-1 ring-red-400/25"
+                            }`}
+                            style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
+                          >
+                            {w.text}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-3 mt-1.5" dir="ltr">
+                        <span className="text-[10px] text-yellow-400/80">▢ missed</span>
+                        <span className="text-[10px] text-red-400/80">▢ mispronounced</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <p className="text-[10px] text-[#18c8d8] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
