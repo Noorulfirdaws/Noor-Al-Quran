@@ -8,7 +8,10 @@
 import {
   alignRecitation,
   compareWord,
+  wordSimilarity,
   stripLeadingBasmala,
+  recitationCompletion,
+  resolveTrailing,
   type WordStatus,
 } from "../app/services/reciteService";
 
@@ -91,5 +94,81 @@ describe("alignRecitation — whole-phrase processing", () => {
     expect(res.statuses[1]).toBe("correct");
     expect(res.statuses[2]).toBe("correct");
     expect(res.cursor).toBe(3);
+  });
+});
+
+// ─── Hard cases from the engine audit ─────────────────────────────────────────
+
+describe("alignRecitation — repeated & similar verses (NW stability)", () => {
+  // Ar-Rahman's refrain repeats; a phrase must align to the CURRENT occurrence,
+  // not jump to a later one the way the old greedy matcher did.
+  const REFRAIN = ["فبأي", "آلاء", "ربكما", "تكذبان"];
+  const TWICE = [...REFRAIN, ...REFRAIN]; // two consecutive refrains
+
+  it("aligns the first occurrence without jumping to the second", () => {
+    const res = alignRecitation(TWICE, freshStatuses(8), 0, ["فبأي", "آلاء", "ربكما", "تكذبان"]);
+    // Exactly the first four are correct; the second four remain unreached.
+    expect(res.statuses.slice(0, 4)).toEqual(["correct", "correct", "correct", "correct"]);
+    expect(res.statuses[4]).not.toBe("skipped");
+    expect(res.cursor).toBe(4);
+    expect(res.skipped).toBe(0);
+  });
+
+  it("does not mark trailing unreached words as skipped", () => {
+    const res = alignRecitation(AYAH, freshStatuses(4), 0, ["الحمد"]);
+    expect(res.statuses[0]).toBe("correct");
+    expect(res.statuses[1]).not.toBe("skipped"); // not reached yet, not an error
+    expect(res.cursor).toBe(1);
+  });
+
+  it("handles a repeated word (reciter says a word twice)", () => {
+    const res = alignRecitation(AYAH, freshStatuses(4), 0, ["الحمد", "الحمد", "لله"]);
+    expect(res.statuses[0]).toBe("correct");
+    expect(res.statuses[1]).toBe("correct"); // the duplicate is treated as insertion
+    expect(res.cursor).toBe(2);
+  });
+});
+
+describe("wordSimilarity — confidence primitive", () => {
+  it("returns 1 for an exact normalized match", () => {
+    expect(wordSimilarity("ٱلْحَمْدُ", "الحمد")).toBe(1);
+  });
+  it("returns a high value for a near-miss and low for a clear miss", () => {
+    // العالمين vs العلمين (one dropped alef) — should still read as near-match
+    expect(wordSimilarity("ٱلْعَٰلَمِينَ", "العلمين")).toBeGreaterThan(0.7);
+    // a clearly different word scores low
+    expect(wordSimilarity("ٱلْعَٰلَمِينَ", "مالك")).toBeLessThan(0.4);
+  });
+});
+
+describe("recitationCompletion — completion engine", () => {
+  it("is NOT complete mid-ayah even if some words are done", () => {
+    const statuses: WordStatus[] = ["correct", "correct", "current", "idle"];
+    const c = recitationCompletion(statuses, 2, 4);
+    expect(c.complete).toBe(false);
+    expect(c.reachedEnd).toBe(false);
+    expect(c.score).toBe(50);
+  });
+  it("is complete only when the LAST word is resolved and cursor reached end", () => {
+    const statuses: WordStatus[] = ["correct", "correct", "correct", "correct"];
+    const c = recitationCompletion(statuses, 4, 4);
+    expect(c.reachedEnd).toBe(true);
+    expect(c.complete).toBe(true);
+    expect(c.score).toBe(100);
+  });
+  it("is not complete if cursor ran off the end but the last word is still idle", () => {
+    // Guards the false-completion failure mode from the audit.
+    const statuses: WordStatus[] = ["correct", "correct", "correct", "idle"];
+    const c = recitationCompletion(statuses, 4, 4);
+    expect(c.reachedEnd).toBe(false);
+    expect(c.complete).toBe(false);
+  });
+});
+
+describe("resolveTrailing — honest scoring on stop", () => {
+  it("marks unreached trailing words as skipped when the user stops", () => {
+    const statuses: WordStatus[] = ["correct", "correct", "current", "idle"];
+    const out = resolveTrailing(statuses, 2);
+    expect(out).toEqual(["correct", "correct", "skipped", "skipped"]);
   });
 });

@@ -94,22 +94,33 @@ function levenshtein(a: string, b: string): number {
 }
 
 /**
- * Compare a Quranic expected word against a Speech-API spoken word.
- * Returns true if they match after normalization, with a 1-edit fuzzy
- * allowance for words longer than 3 characters.
+ * Similarity between a Quranic expected word and a spoken word, 0..1.
+ * 1 = exact (after normalization); decreases with edit distance.
+ * This is the confidence primitive the aligner and error engine build on.
  */
-export function compareWord(expected: string, spoken: string): boolean {
+export function wordSimilarity(expected: string, spoken: string): number {
   const e = normalizeArabic(expected);
   const s = normalizeArabic(spoken);
-  if (!e || !s) return false;
-  if (e === s) return true;
-  // Very short words — exact only
-  if (e.length <= 2 || s.length <= 2) return false;
-  // Reject if length differs too much
-  if (Math.abs(e.length - s.length) > 2) return false;
-  // Allow 1-edit distance for medium words, 2-edit for long words
-  const maxEdits = e.length >= 6 ? 2 : 1;
-  return levenshtein(e, s) <= maxEdits;
+  if (!e || !s) return 0;
+  if (e === s) return 1;
+  const maxLen = Math.max(e.length, s.length);
+  if (maxLen === 0) return 0;
+  const dist = levenshtein(e, s);
+  const ratio = 1 - dist / maxLen;
+  // Very short words are risky to fuzzy-match — require near-exact.
+  if (e.length <= 2 || s.length <= 2) return e === s ? 1 : 0;
+  return ratio;
+}
+
+/** Threshold above which two words are considered the "same" word. */
+export const MATCH_THRESHOLD = 0.6;
+
+/**
+ * Compare a Quranic expected word against a Speech-API spoken word.
+ * Boolean wrapper over wordSimilarity, kept for backward compatibility.
+ */
+export function compareWord(expected: string, spoken: string): boolean {
+  return wordSimilarity(expected, spoken) >= MATCH_THRESHOLD;
 }
 
 /**
@@ -135,65 +146,176 @@ export function splitWords(text: string): string[] {
 
 export interface AlignResult {
   statuses: WordStatus[];
+  confidences: number[];   // 0..1 per word, parallel to statuses
   cursor: number;
   correct: number;
   incorrect: number;
   skipped: number;
 }
 
+// Needleman-Wunsch scoring. Tuned so that one substitution is cheaper than a
+// skip+insert pair, keeping mispronunciations as "incorrect" rather than
+// fragmenting into skipped+ignored.
+const GAP_EXPECTED = -0.6;   // expected word not spoken (skip)
+const GAP_SPOKEN = -0.5;     // extra spoken word (insertion)
+const MISMATCH = -0.55;      // diagonal where similarity is below threshold
+
+/**
+ * Align a spoken word stream against the expected Quran words using global
+ * (Needleman-Wunsch) alignment over a bounded window from `cursor`. Optimal —
+ * unlike the old greedy matcher it stays correct on repeated/similar verses,
+ * and it never advances past a word it didn't actually match.
+ *
+ * Marks per word: correct (with confidence), incorrect (substitution), or
+ * skipped (an expected word the reciter passed over BEFORE a later match).
+ * Trailing expected words that weren't reached stay "idle"/"current" so the
+ * reciter can continue — they are only resolved on stop (see resolveTrailing).
+ */
 export function alignRecitation(
   expected: string[],
   statuses: WordStatus[],
   cursor: number,
   spokenWords: string[],
-  lookahead = 3,
+  lookahead = 4,
 ): AlignResult {
   const out = statuses.slice();
-  let i = cursor;          // index into expected words
-  let s = 0;               // index into spoken words
-  let correct = 0, incorrect = 0, skipped = 0;
+  const confidences: number[] = new Array(statuses.length).fill(0);
 
-  // Find the first index k in arr[from..to) whose word matches `word`.
-  // `expectedSide` says which argument is the expected (Quran) side, so
-  // compareWord's (expected, spoken) order is honoured.
-  const findAhead = (
-    arr: string[], from: number, to: number, word: string, expectedSide: boolean,
-  ): number => {
-    for (let k = from; k < to && k < arr.length; k++) {
-      const ok = expectedSide ? compareWord(arr[k], word) : compareWord(word, arr[k]);
-      if (ok) return k;
-    }
-    return -1;
-  };
+  if (spokenWords.length === 0 || cursor >= expected.length) {
+    return { statuses: out, confidences, cursor, correct: 0, incorrect: 0, skipped: 0 };
+  }
 
-  while (s < spokenWords.length && i < expected.length) {
-    const spoken = spokenWords[s];
+  // Bounded window of expected words to align against this spoken phrase.
+  const winEnd = Math.min(expected.length, cursor + spokenWords.length + lookahead);
+  const E = expected.slice(cursor, winEnd);   // expected window
+  const S = spokenWords;
+  const n = E.length, m = S.length;
 
-    // Direct hit
-    if (compareWord(expected[i], spoken)) {
-      out[i] = "correct"; correct++; i++; s++; continue;
-    }
-
-    // Did the reciter skip some expected words? (spoken matches a word ahead)
-    const jExp = findAhead(expected, i + 1, i + 1 + lookahead, spoken, true);
-    // Did the ASR insert an extra word? (expected[i] matches a later spoken word)
-    const kSpk = findAhead(spokenWords, s + 1, s + 1 + lookahead, expected[i], false);
-
-    if (jExp !== -1 && (kSpk === -1 || (jExp - i) <= (kSpk - s))) {
-      // Words i..jExp-1 were missed
-      for (let k = i; k < jExp; k++) { out[k] = "skipped"; skipped++; }
-      out[jExp] = "correct"; correct++;
-      i = jExp + 1; s++;
-    } else if (kSpk !== -1) {
-      // spoken[s..kSpk-1] were extra/insertions — ignore them, keep expected[i]
-      s = kSpk;
-    } else {
-      // Genuine mismatch — the expected word was recited incorrectly
-      out[i] = "incorrect"; incorrect++; i++; s++;
+  // DP matrix + traceback. dp[i][j] = best score aligning E[0..i) with S[0..j).
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  const sim: number[][] = Array.from({ length: n }, () => new Array(m).fill(0));
+  for (let i = 1; i <= n; i++) dp[i][0] = dp[i - 1][0] + GAP_EXPECTED;
+  for (let j = 1; j <= m; j++) dp[0][j] = dp[0][j - 1] + GAP_SPOKEN;
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const sm = wordSimilarity(E[i - 1], S[j - 1]);
+      sim[i - 1][j - 1] = sm;
+      const diagScore = sm >= MATCH_THRESHOLD ? sm : MISMATCH;
+      dp[i][j] = Math.max(
+        dp[i - 1][j - 1] + diagScore,   // align E[i-1] with S[j-1]
+        dp[i - 1][j] + GAP_EXPECTED,    // E[i-1] skipped
+        dp[i][j - 1] + GAP_SPOKEN,      // S[j-1] inserted
+      );
     }
   }
 
-  return { statuses: out, cursor: i, correct, incorrect, skipped };
+  // Semi-global: FREE end-gaps on the expected side. The reciter hasn't
+  // necessarily reached the end of the window, so trailing expected words must
+  // not be force-consumed (which would mismark them) — and on ties (e.g. a
+  // repeated refrain) we want the EARLIEST occurrence, i.e. the smallest i*.
+  let iStar = 0;
+  let bestEnd = dp[0][m];
+  for (let ii = 1; ii <= n; ii++) {
+    if (dp[ii][m] > bestEnd) { bestEnd = dp[ii][m]; iStar = ii; }
+  }
+
+  // Traceback from (iStar, m); expected words >= iStar stay untouched (idle).
+  type Op = { ei: number; kind: "match" | "mismatch" | "skip" };
+  const ops: Op[] = [];
+  let i = iStar, j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0) {
+      const sm = sim[i - 1][j - 1];
+      const diagScore = sm >= MATCH_THRESHOLD ? sm : MISMATCH;
+      if (dp[i][j] === dp[i - 1][j - 1] + diagScore) {
+        ops.push({ ei: i - 1, kind: sm >= MATCH_THRESHOLD ? "match" : "mismatch" });
+        i--; j--; continue;
+      }
+    }
+    if (i > 0 && dp[i][j] === dp[i - 1][j] + GAP_EXPECTED) {
+      ops.push({ ei: i - 1, kind: "skip" });
+      i--; continue;
+    }
+    // else: spoken insertion — consume S, no expected word touched
+    j--;
+  }
+  ops.reverse();
+
+  // Find the last expected window index that was actually matched/substituted.
+  // Trailing skips (after the last real match) are NOT marked — the reciter
+  // simply hasn't reached them yet.
+  let lastTouched = -1;
+  for (const op of ops) {
+    if (op.kind === "match" || op.kind === "mismatch") lastTouched = op.ei;
+  }
+
+  let correct = 0, incorrect = 0, skipped = 0;
+  for (const op of ops) {
+    const abs = cursor + op.ei;
+    if (op.kind === "match") {
+      out[abs] = "correct"; confidences[abs] = sim[op.ei][/*any matched j*/ findMatchedJ(sim, op.ei, S.length)];
+      correct++;
+    } else if (op.kind === "mismatch") {
+      out[abs] = "incorrect"; confidences[abs] = 1 - bestSim(sim, op.ei); incorrect++;
+    } else if (op.kind === "skip" && op.ei < lastTouched) {
+      out[abs] = "skipped"; confidences[abs] = 0.9; skipped++;
+    }
+  }
+
+  const newCursor = lastTouched >= 0 ? cursor + lastTouched + 1 : cursor;
+  return { statuses: out, confidences, cursor: newCursor, correct, incorrect, skipped };
+}
+
+function findMatchedJ(sim: number[][], ei: number, mLen: number): number {
+  let best = 0, bestV = -1;
+  for (let j = 0; j < mLen; j++) {
+    if (sim[ei] && sim[ei][j] > bestV) { bestV = sim[ei][j]; best = j; }
+  }
+  return best;
+}
+function bestSim(sim: number[][], ei: number): number {
+  let v = 0;
+  if (sim[ei]) for (const x of sim[ei]) if (x > v) v = x;
+  return v;
+}
+
+// ─── Ayah / surah completion engine ───────────────────────────────────────────
+// Never finalize feedback before completion is genuinely reached. Completion
+// requires the END of the expected text to have been matched — not merely a
+// cursor that ran off the end via over-advancing.
+
+export interface CompletionState {
+  complete: boolean;
+  score: number;        // 0..100 — how much of the expected text was reached
+  reachedEnd: boolean;
+}
+
+export function recitationCompletion(
+  statuses: WordStatus[],
+  cursor: number,
+  total: number,
+): CompletionState {
+  if (total === 0) return { complete: false, score: 0, reachedEnd: false };
+  const touched = statuses.filter((s) => s !== "idle" && s !== "current").length;
+  const score = Math.round((touched / total) * 100);
+  // Reached the end only when the cursor is at/after the last word AND the last
+  // word actually has a resolved (non-idle) status.
+  const lastResolved = statuses[total - 1] !== "idle" && statuses[total - 1] !== "current";
+  const reachedEnd = cursor >= total && lastResolved;
+  return { complete: reachedEnd && score >= 90, score, reachedEnd };
+}
+
+/**
+ * On explicit stop, resolve any words the reciter never reached. Everything
+ * from the cursor to the end that is still idle/current becomes "skipped" so
+ * the score reflects an incomplete recitation honestly.
+ */
+export function resolveTrailing(statuses: WordStatus[], cursor: number): WordStatus[] {
+  const out = statuses.slice();
+  for (let k = cursor; k < out.length; k++) {
+    if (out[k] === "idle" || out[k] === "current") out[k] = "skipped";
+  }
+  return out;
 }
 
 // ─── Web Speech API wrapper ───────────────────────────────────────────────────
@@ -235,6 +357,23 @@ export function createRecognition(
   let recognition: any = null;
   let active = false;       // user intent: should we be listening?
   let restarting = false;
+  let restartTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function scheduleRestart(delay: number) {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      restartTimer = null;
+      if (!active) return;
+      try {
+        recognition = build();
+        recognition.start();
+      } catch {
+        // start() can throw if the previous instance is still winding down —
+        // try again shortly so we never silently stop mid-recitation.
+        scheduleRestart(150);
+      }
+    }, delay);
+  }
 
   function build() {
     const r = new SR();
@@ -249,15 +388,13 @@ export function createRecognition(
     };
 
     r.onend = () => {
+      // Web Speech ends on its own after a brief silence — a breath, a pause for
+      // tajweed, a slow reciter. As long as the USER hasn't stopped, we treat
+      // every onend as "keep listening" and restart immediately (minimal gap),
+      // so pauses never end the session and as little audio as possible is lost.
       if (active && autoRestart) {
-        // Chrome killed it — restart after a short pause
         restarting = true;
-        setTimeout(() => {
-          if (active) {
-            recognition = build();
-            try { recognition.start(); } catch { /* ignore */ }
-          }
-        }, 200);
+        scheduleRestart(50);
       } else {
         callbacks.onEnd?.();
       }
@@ -298,10 +435,12 @@ export function createRecognition(
     },
     stop() {
       active = false;
+      if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
       try { recognition?.stop(); } catch { /* ignore */ }
     },
     abort() {
       active = false;
+      if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
       try { recognition?.abort(); } catch { /* ignore */ }
     },
   };

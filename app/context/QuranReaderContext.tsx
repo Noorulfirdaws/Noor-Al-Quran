@@ -12,6 +12,7 @@ import { saveProgress } from "../services/bookmarkService";
 import {
   type WordStatus, splitWords,
   alignRecitation, type AlignResult,
+  recitationCompletion, resolveTrailing,
   isSpeechSupported, createRecognition, type RecognitionHandle,
 } from "../services/reciteService";
 
@@ -108,6 +109,8 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     correct: 0, incorrect: 0, skipped: 0, accuracy: 0,
   });
   const reciteHandleRef = useRef<RecognitionHandle | null>(null);
+  // Near-end inactivity fallback so a dropped final word can't hang the session.
+  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Flat array of all words across the currently loaded surah (for matching)
   const reciteWordsRef = useRef<string[]>([]);
   // Keep cursor in a ref so recognition callbacks always see the latest value
@@ -144,8 +147,38 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     setReciteStats(stats);
   }, []);
 
+  const clearCompletionTimer = useCallback(() => {
+    if (completionTimerRef.current) {
+      clearTimeout(completionTimerRef.current);
+      completionTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * When the reciter has reached the last word (or two) but the ASR hasn't
+   * delivered a clean final word — common at end of ayah — arm a short timer.
+   * If nothing advances, finalize honestly: any unreached trailing words become
+   * "skipped" (resolveTrailing) so the session never hangs and the score is real.
+   */
+  const armCompletionFallback = useCallback((cursor: number, total: number) => {
+    clearCompletionTimer();
+    if (total === 0 || cursor < total - 1) return; // only near the very end
+    completionTimerRef.current = setTimeout(() => {
+      const resolved = resolveTrailing(reciteStatusesRef.current, reciteCursorRef.current);
+      reciteStatusesRef.current = resolved;
+      setReciteWordStatuses(resolved);
+      const stats = recalcStats(resolved);
+      reciteStatsRef.current = stats;
+      setReciteStats(stats);
+      setReciteDone(true);
+      setIsReciting(false);
+      reciteHandleRef.current?.stop();
+    }, 6000);
+  }, [clearCompletionTimer]);
+
   const startReciting = useCallback(() => {
     if (!isSpeechSupported()) return;
+    clearCompletionTimer();
     // Build flat word list from ayahsWithWords if available, else from ayahs text
     let words: string[] = [];
     if (reciteStatusesRef.current.length > 0 && reciteWordsRef.current.length > 0) {
@@ -212,10 +245,22 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
         if (!best || best.cursor === cursor) return; // nothing advanced
 
         advanceCursor(best.statuses, best.cursor);
-        if (best.cursor >= allWords.length) {
+
+        // Completion engine: finalize ONLY when the end of the surah has truly
+        // been reached (last word resolved), never just because a cursor ran off
+        // the end. This prevents both premature finalization and hanging.
+        const completion = recitationCompletion(
+          reciteStatusesRef.current, best.cursor, allWords.length,
+        );
+        if (completion.complete) {
+          clearCompletionTimer();
           setReciteDone(true);
           setIsReciting(false);
           reciteHandleRef.current?.stop();
+        } else {
+          // Not finished yet — if we're at the very end, arm the dropped-final-
+          // word fallback; otherwise keep listening (a mid-surah pause is fine).
+          armCompletionFallback(best.cursor, allWords.length);
         }
       },
       onEnd: () => {
@@ -229,14 +274,15 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
     reciteHandleRef.current = handle;
     handle.start();
-  }, [ayahs, ayahsWithWords, advanceCursor]);
+  }, [ayahs, ayahsWithWords, advanceCursor, clearCompletionTimer, armCompletionFallback]);
 
   const stopReciting = useCallback(() => {
+    clearCompletionTimer();
     reciteHandleRef.current?.stop();
     reciteHandleRef.current = null;
     setIsReciting(false);
     setReciteInterim("");
-  }, []);
+  }, [clearCompletionTimer]);
 
   const resetRecite = useCallback(() => {
     stopReciting();
