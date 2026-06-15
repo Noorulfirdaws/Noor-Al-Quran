@@ -112,8 +112,10 @@ export function wordSimilarity(expected: string, spoken: string): number {
   return ratio;
 }
 
-/** Threshold above which two words are considered the "same" word. */
-export const MATCH_THRESHOLD = 0.6;
+/** Threshold above which two words are considered the "same" word.
+ * Raised from 0.6 → 0.72 so a clearly different word is no longer accepted as
+ * "correct" — fewer false positives where a mistake was marked good. */
+export const MATCH_THRESHOLD = 0.72;
 
 /**
  * Compare a Quranic expected word against a Speech-API spoken word.

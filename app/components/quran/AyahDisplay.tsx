@@ -130,9 +130,9 @@ export default function AyahDisplay({
 
       return (
         <p
-          className={`${arabicSize} leading-loose text-right`}
+          className={`${arabicSize} leading-loose text-right font-arabic`}
           dir="rtl"
-          style={{ fontFamily: "var(--font-quran), var(--font-amiri), serif" }}
+          style={{ fontFamily: 'var(--font-quran), var(--font-amiri), "Amiri Quran", "Scheherazade New", serif' }}
         >
           {rawWords.map((wordText, i) => {
             const flatIdx = reciteWordOffset + i;
@@ -153,7 +153,8 @@ export default function AyahDisplay({
               <span
                 key={i}
                 title={possible ? "Possible mistake" : status === "incorrect" ? "Mistake detected" : status === "skipped" ? "Skipped" : undefined}
-                className={`inline-block mx-1 rounded px-0.5 transition-all duration-300 ${colorClass}`}
+                className={`inline-block mx-1 rounded px-0.5 transition-all duration-300 font-arabic ${colorClass}`}
+                style={{ fontFamily: 'var(--font-quran), var(--font-amiri), "Amiri Quran", "Scheherazade New", serif' }}
               >
                 {wordText}
               </span>
