@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, SkipForward, Star, Zap, Trophy, RotateCcw, ChevronRight, Flame } from "lucide-react";
+import { CheckCircle2, XCircle, SkipForward, Star, Zap, Trophy, RotateCcw, ChevronRight, Flame, Sparkles, Loader2, Lock } from "lucide-react";
 import { recordSession, coachComment, xpForNextLevel, levelTitle, ACHIEVEMENTS } from "../../services/gamificationService";
 import type { SessionResult } from "../../services/gamificationService";
 import { reviewSurah } from "../../services/revisionService";
+import { usePremium } from "../../context/PremiumContext";
+import { canScore, consumeQuota, quotaRemaining, quotaLimit } from "../../services/quotaService";
+import { scoreRecitation, type ScoreResult } from "../../services/aiScoringService";
+import { listRecordings, getRecording } from "../../services/recordingService";
 
 interface Props {
   surahNumber: number;
@@ -13,22 +17,54 @@ interface Props {
   skipped: number;
   accuracy: number;
   ayahsRecited: number;
+  expectedText?: string; // expected ayah text(s) for hosted AI tajweed scoring
   onReset: () => void;
   onClose: () => void;
 }
 
 export default function RecitationSummary({
-  surahNumber, surahName, correct, incorrect, skipped, accuracy, ayahsRecited, onReset, onClose,
+  surahNumber, surahName, correct, incorrect, skipped, accuracy, ayahsRecited, expectedText = "", onReset, onClose,
 }: Props) {
+  const { isPremium } = usePremium();
   const [result, setResult] = useState<SessionResult | null>(null);
   const [showAch, setShowAch] = useState(false);
+
+  // Hosted AI tajweed feedback (on-demand — only spends when the user clicks).
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<ScoreResult | null>(null);
+  const [remaining, setRemaining] = useState<number>(0);
 
   useEffect(() => {
     const r = recordSession({ surah: surahNumber, ayahsRecited, correct, incorrect, skipped, accuracy });
     reviewSurah(surahNumber, surahName, accuracy); // schedule next spaced-repetition review
     setResult(r);
+    setRemaining(quotaRemaining(isPremium));
     if (r.newAchievements.length > 0) setTimeout(() => setShowAch(true), 800);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getAiFeedback = async () => {
+    if (!canScore(isPremium)) { setRemaining(0); return; }
+    setAiLoading(true);
+    try {
+      // Use the most recent recording for this surah as the audio source.
+      const all = await listRecordings();
+      const latest = all.find((r) => r.surah === surahNumber) ?? all[0];
+      if (!latest) { setAiResult({ configured: false, message: "No recording found for this session." }); return; }
+      const full = await getRecording(latest.id);
+      if (!full) { setAiResult({ configured: false, message: "Recording unavailable." }); return; }
+      const res = await scoreRecitation(full.blob, expectedText, surahNumber, 1);
+      // Only consume a quota unit when the API actually did paid work.
+      if (res.configured && res.transcript !== undefined) {
+        consumeQuota(isPremium);
+        setRemaining(quotaRemaining(isPremium));
+      }
+      setAiResult(res);
+    } catch {
+      setAiResult({ configured: false, error: "Could not reach the scoring service." });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const comment = coachComment(accuracy, result?.state.currentStreak ?? 0);
   const lvlInfo = result ? xpForNextLevel(result.state.totalXp) : null;
@@ -122,6 +158,56 @@ export default function RecitationSummary({
               <p className="text-white/65 text-sm leading-relaxed">{comment}</p>
             </div>
           </div>
+        </div>
+
+        {/* Hosted AI Tajweed Feedback (on-demand, quota-limited) */}
+        <div className="px-6 py-4 border-b border-white/5">
+          {!aiResult && (
+            <button
+              onClick={getAiFeedback}
+              disabled={aiLoading || remaining <= 0}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#18c8d8]/15 to-[#57d996]/15 border border-[#18c8d8]/30 hover:border-[#18c8d8]/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <><Loader2 size={15} className="animate-spin" /> Analyzing your recitation…</>
+              ) : remaining <= 0 ? (
+                <><Lock size={14} /> Monthly AI feedback used up</>
+              ) : (
+                <><Sparkles size={15} className="text-[#18c8d8]" /> Get AI Tajweed Feedback</>
+              )}
+            </button>
+          )}
+          {!aiResult && remaining > 0 && (
+            <p className="text-white/30 text-[10px] text-center mt-1.5">
+              {remaining} of {quotaLimit(isPremium)} AI analyses left this month{!isPremium && " · Premium gets 50"}
+            </p>
+          )}
+
+          {/* AI result */}
+          {aiResult?.configured && (aiResult.feedback || aiResult.tajweedNotes?.length) ? (
+            <div className="bg-[#18c8d8]/8 border border-[#18c8d8]/20 rounded-xl p-3 mt-1">
+              <p className="text-[10px] text-[#18c8d8] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                <Sparkles size={11} /> AI Tajweed Analysis
+              </p>
+              {aiResult.feedback && <p className="text-white/70 text-sm leading-relaxed">{aiResult.feedback}</p>}
+              {aiResult.tajweedNotes && aiResult.tajweedNotes.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {aiResult.tajweedNotes.map((n, i) => (
+                    <li key={i} className="text-white/55 text-xs flex items-start gap-1.5">
+                      <span className="text-[#18c8d8] mt-0.5">•</span> {n}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : aiResult && !aiResult.configured ? (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 mt-1">
+              <p className="text-white/50 text-xs leading-relaxed">
+                {aiResult.message ?? aiResult.error ?? "AI tajweed scoring isn't enabled yet."} Your free word-by-word
+                feedback above is always available.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* New achievements */}

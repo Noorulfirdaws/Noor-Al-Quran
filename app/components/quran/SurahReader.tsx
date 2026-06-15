@@ -562,6 +562,7 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
           skipped={reciteStats.skipped}
           accuracy={reciteStats.accuracy}
           ayahsRecited={ayahsRecited()}
+          expectedText={ayahs.map((a) => a.text).join(" ").slice(0, 1200)}
           onReset={() => { setShowSummary(false); resetRecite(); }}
           onClose={() => setShowSummary(false)}
         />
