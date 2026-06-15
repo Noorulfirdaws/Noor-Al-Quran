@@ -195,16 +195,14 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     if (reciteStatusesRef.current.length > 0 && reciteWordsRef.current.length > 0) {
       // Already have words — just resume
     } else {
-      const hasWordData = ayahsWithWords.length > 0;
-      if (hasWordData) {
-        ayahsWithWords.forEach((a) => {
-          a.words.forEach((w) => words.push(w.textUthmani));
-        });
-      } else {
-        ayahs.forEach((a) => {
-          splitWords(a.text).forEach((w) => words.push(w));
-        });
-      }
+      // ALWAYS build the flat word list from ayah.text split — the SAME source
+      // the reader renders and offsets against in recite mode. Mixing sources
+      // (per-word data vs text split) made the status array length disagree with
+      // the rendered word count, so statuses[idx] was undefined and NOTHING
+      // coloured. One source = correct, reliable colouring.
+      ayahs.forEach((a) => {
+        splitWords(a.text).forEach((w) => words.push(w));
+      });
       reciteWordsRef.current = words;
       // Initialise statuses: first word = "current", rest = "idle"
       const initialStatuses: WordStatus[] = words.map((_, i) =>
@@ -224,73 +222,82 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
     setIsReciting(true);
 
+    // Align a spoken word stream against the expected words. `commit` = true for
+    // FINAL results (locks the cursor in); false for INTERIM results (live,
+    // tentative coloring as the reciter speaks). Driving coloring from interim
+    // is what makes words light up immediately — finals from continuous Web
+    // Speech are often delayed or dropped, so relying on them alone left the
+    // page uncolored.
+    const applySpoken = (alts: string[], commit: boolean) => {
+      const cursor = reciteCursorRef.current;
+      const allWords = reciteWordsRef.current;
+      const baseStatuses = reciteStatusesRef.current;
+      if (allWords.length === 0 || cursor >= allWords.length) return;
+
+      let best: AlignResult | null = null;
+      for (const alt of alts) {
+        const spoken = splitWords(alt);
+        if (spoken.length === 0) continue;
+        const res = alignRecitation(allWords, baseStatuses, cursor, spoken);
+        if (
+          !best ||
+          res.correct - res.incorrect > best.correct - best.incorrect ||
+          (res.correct - res.incorrect === best.correct - best.incorrect && res.cursor > best.cursor)
+        ) {
+          best = res;
+        }
+      }
+      if (!best || best.cursor === cursor) return; // nothing matched yet
+
+      // Merge per-word confidence for display.
+      const conf = reciteConfidencesRef.current.slice();
+      if (conf.length !== best.confidences.length) conf.length = best.confidences.length;
+      for (let k = 0; k < best.confidences.length; k++) {
+        if (best.confidences[k] > 0) conf[k] = best.confidences[k];
+      }
+
+      if (!commit) {
+        // Interim — update the VISIBLE state only; don't advance committed refs.
+        const marked = [...best.statuses];
+        if (best.cursor < marked.length && marked[best.cursor] === "idle") marked[best.cursor] = "current";
+        setReciteWordStatuses(marked);
+        setReciteWordCursor(best.cursor);
+        setReciteStats(recalcStats(marked));
+        setReciteWordConfidences(conf);
+        return;
+      }
+
+      // Final — commit the advance (refs + state + stats).
+      advanceCursor(best.statuses, best.cursor);
+      reciteConfidencesRef.current = conf;
+      setReciteWordConfidences(conf);
+
+      const completion = recitationCompletion(reciteStatusesRef.current, best.cursor, allWords.length);
+      if (completion.complete) {
+        clearCompletionTimer();
+        const st = reciteStatsRef.current;
+        logRecitation({
+          surah: surahMeta?.number ?? 0, totalWords: allWords.length,
+          correct: st.correct, incorrect: st.incorrect, skipped: st.skipped,
+          accuracy: st.accuracy, completionScore: completion.score,
+          reachedEnd: completion.reachedEnd, finalizeReason: "completed",
+        });
+        setReciteDone(true);
+        setIsReciting(false);
+        reciteHandleRef.current?.stop();
+      } else {
+        armCompletionFallback(best.cursor, allWords.length);
+      }
+    };
+
     const handle = createRecognition({
       onInterimResult: (transcript) => {
         setReciteInterim(transcript);
+        applySpoken([transcript], false); // live coloring as they recite
       },
       onFinalResult: (_primary, alternatives) => {
         setReciteInterim("");
-        const cursor = reciteCursorRef.current;
-        const allWords = reciteWordsRef.current;
-        const baseStatuses = reciteStatusesRef.current;
-
-        if (cursor >= allWords.length) return;
-
-        // A final result usually carries a whole phrase / ayah. Align that
-        // entire spoken word stream against the expected Uthmani word list,
-        // advancing through every word it covers. Try all ASR alternatives and
-        // keep the one that yields the best alignment (most correct, fewest
-        // wrong), so a better transcription wins.
-        let best: AlignResult | null = null;
-        for (const alt of alternatives) {
-          const spoken = splitWords(alt);
-          if (spoken.length === 0) continue;
-          const res = alignRecitation(allWords, baseStatuses, cursor, spoken);
-          if (
-            !best ||
-            res.correct - res.incorrect > best.correct - best.incorrect ||
-            (res.correct - res.incorrect === best.correct - best.incorrect && res.cursor > best.cursor)
-          ) {
-            best = res;
-          }
-        }
-
-        if (!best || best.cursor === cursor) return; // nothing advanced
-
-        advanceCursor(best.statuses, best.cursor);
-
-        // Merge this round's per-word confidence into the persistent array.
-        const conf = reciteConfidencesRef.current.slice();
-        if (conf.length !== best.confidences.length) conf.length = best.confidences.length;
-        for (let k = 0; k < best.confidences.length; k++) {
-          if (best.confidences[k] > 0) conf[k] = best.confidences[k];
-        }
-        reciteConfidencesRef.current = conf;
-        setReciteWordConfidences(conf);
-
-        // Completion engine: finalize ONLY when the end of the surah has truly
-        // been reached (last word resolved), never just because a cursor ran off
-        // the end. This prevents both premature finalization and hanging.
-        const completion = recitationCompletion(
-          reciteStatusesRef.current, best.cursor, allWords.length,
-        );
-        if (completion.complete) {
-          clearCompletionTimer();
-          const st = reciteStatsRef.current;
-          logRecitation({
-            surah: surahMeta?.number ?? 0, totalWords: allWords.length,
-            correct: st.correct, incorrect: st.incorrect, skipped: st.skipped,
-            accuracy: st.accuracy, completionScore: completion.score,
-            reachedEnd: completion.reachedEnd, finalizeReason: "completed",
-          });
-          setReciteDone(true);
-          setIsReciting(false);
-          reciteHandleRef.current?.stop();
-        } else {
-          // Not finished yet — if we're at the very end, arm the dropped-final-
-          // word fallback; otherwise keep listening (a mid-surah pause is fine).
-          armCompletionFallback(best.cursor, allWords.length);
-        }
+        applySpoken(alternatives, true);  // lock it in
       },
       onEnd: () => {
         setIsReciting(false);

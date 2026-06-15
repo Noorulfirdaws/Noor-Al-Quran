@@ -123,9 +123,10 @@ export default function AyahDisplay({
     }
 
     if (isRecite) {
-      const rawWords = hasWords
-        ? words.map((w) => w.textUthmani)
-        : ayah.text.split(/\s+/).filter(Boolean);
+      // Always split the ayah text — must match the flat status array built in
+      // the context (also from ayah.text split) so offsets line up and words
+      // actually colour. Do NOT use per-word data here (different token count).
+      const rawWords = ayah.text.split(/\s+/).filter(Boolean);
 
       return (
         <p

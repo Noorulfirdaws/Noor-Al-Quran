@@ -49,11 +49,11 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     scrolledRef.current = false;
   }, [surahNumber, loadSurah]);
 
-  // Load word data when entering word-by-word OR recite mode.
-  // Recite mode aligns the spoken stream against per-word Uthmani tokens, so it
-  // needs the same word data for accurate, word-level mistake detection.
+  // Load word data only for word-by-word mode. Recite mode deliberately uses
+  // ayah.text split (consistent with the status array), so it must NOT depend
+  // on per-word data loading — that timing mismatch was breaking colouring.
   useEffect(() => {
-    if ((mode === "word-by-word" || mode === "recite") && ayahsWithWords.length === 0) {
+    if (mode === "word-by-word" && ayahsWithWords.length === 0) {
       loadWords(surahNumber);
     }
   }, [mode, ayahsWithWords.length, loadWords, surahNumber]);
@@ -103,18 +103,14 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
   const reciteOffsets = useCallback((): Map<number, number> => {
     const map = new Map<number, number>();
     let offset = 0;
-    const hasWordData = ayahsWithWords.length > 0;
+    // Always count words from ayah.text split — the SAME source the context
+    // builds the flat status array from, so offsets align and words colour.
     ayahs.forEach((a) => {
       map.set(a.numberInSurah, offset);
-      if (hasWordData) {
-        const aw = ayahsWithWords.find((x) => x.numberInSurah === a.numberInSurah);
-        offset += aw ? aw.words.length : a.text.split(/\s+/).filter(Boolean).length;
-      } else {
-        offset += a.text.split(/\s+/).filter(Boolean).length;
-      }
+      offset += a.text.split(/\s+/).filter(Boolean).length;
     });
     return map;
-  }, [ayahs, ayahsWithWords]);
+  }, [ayahs]);
 
   const ayahWordOffsets = mode === "recite" ? reciteOffsets() : new Map<number, number>();
 
