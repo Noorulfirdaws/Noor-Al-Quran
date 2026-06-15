@@ -4,7 +4,7 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import {
   loadGamification, xpForNextLevel, levelTitle, ACHIEVEMENTS,
-  getStruggles, type GamificationState,
+  getStruggles, dailyCoachTip, type GamificationState,
 } from "../services/gamificationService";
 import { Flame, Zap, Trophy, Star, BookOpen, Target, TrendingUp, BarChart3, ArrowRight, Mic, Lock } from "lucide-react";
 
@@ -17,6 +17,7 @@ export default function DashboardPage() {
 
   const lvl = xpForNextLevel(state.totalXp);
   const struggles = getStruggles(5);
+  const tip = dailyCoachTip();
   const recentSessions = state.sessions.slice(0, 7);
   const avgAccuracy = recentSessions.length
     ? Math.round(recentSessions.reduce((s, x) => s + x.accuracy, 0) / recentSessions.length)
@@ -34,6 +35,23 @@ export default function DashboardPage() {
           <p className="text-[#57d996] text-[11px] font-bold tracking-widest uppercase mb-1">My Progress</p>
           <h1 className="text-3xl font-black">Hifz Dashboard</h1>
           <p className="text-white/40 text-sm mt-1">Your personal AI memorization journey</p>
+        </div>
+
+        {/* AI Coach daily tip */}
+        <div className="mb-6 bg-gradient-to-r from-[#57d996]/10 to-[#18c8d8]/8 border border-[#57d996]/20 rounded-2xl p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#57d996]/15 border border-[#57d996]/25 flex items-center justify-center flex-shrink-0">
+              <Star size={18} className="text-[#57d996]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-[#57d996]/80 font-bold uppercase tracking-widest mb-0.5">AI Hifz Coach</p>
+              <p className="text-white font-bold text-sm">{tip.headline}</p>
+              <p className="text-white/50 text-xs mt-1 leading-relaxed">{tip.body}</p>
+              <Link href={tip.cta.href} className="inline-flex items-center gap-1.5 mt-3 text-[#57d996] text-xs font-bold hover:gap-2.5 transition-all">
+                {tip.cta.label} <ArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
         </div>
 
         {isEmpty ? <EmptyState /> : (

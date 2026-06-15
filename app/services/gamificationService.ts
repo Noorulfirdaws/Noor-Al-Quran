@@ -233,6 +233,53 @@ export function getStruggles(limit = 5): StruggleEntry[] {
 
 // ─── Coach comment generator ──────────────────────────────────────────────────
 
+// ─── Daily AI coach guidance (dashboard banner) ───────────────────────────────
+// Synthesizes streak, recent accuracy, and struggles into one actionable nudge.
+
+export function dailyCoachTip(): { headline: string; body: string; cta: { label: string; href: string } } {
+  const s = loadGamification();
+  const struggles = getStruggles(1);
+  const recent = s.sessions.slice(0, 5);
+  const avg = recent.length ? Math.round(recent.reduce((a, x) => a + x.accuracy, 0) / recent.length) : 0;
+  const today = TODAY();
+  const practicedToday = s.lastActiveDate === today;
+
+  if (s.totalSessions === 0) {
+    return {
+      headline: "Begin your Hifz journey today",
+      body: "Start with Surah Al-Fatiha — recite it aloud and your AI teacher will give instant, word-by-word feedback.",
+      cta: { label: "Recite Al-Fatiha", href: "/quran/1" },
+    };
+  }
+  if (struggles.length > 0) {
+    const st = struggles[0];
+    return {
+      headline: `Strengthen ${st.surahName} today`,
+      body: `You've missed Ayah ${st.ayah} ${st.mistakes} times — it's your weakest verse. Repeat it 3 times to lock it in.`,
+      cta: { label: `Review ${st.surahName}`, href: `/quran/${st.surah}?ayah=${st.ayah}` },
+    };
+  }
+  if (!practicedToday && s.currentStreak > 0) {
+    return {
+      headline: `Keep your ${s.currentStreak}-day streak alive 🔥`,
+      body: "A short session today protects your streak and your memory. Even one ayah counts.",
+      cta: { label: "Recite now", href: "/quran" },
+    };
+  }
+  if (avg >= 90) {
+    return {
+      headline: "Your accuracy is excellent — push further",
+      body: `You're averaging ${avg}%. Try memorizing a new surah, or revise an older one before you forget it.`,
+      cta: { label: "Open Revision Planner", href: "/revision" },
+    };
+  }
+  return {
+    headline: "Consistency builds Hifz",
+    body: `Your recent average is ${avg}%. Focus on the words marked red — daily repetition is the key to retention.`,
+    cta: { label: "Continue reciting", href: "/quran" },
+  };
+}
+
 export function coachComment(accuracy: number, streak: number): string {
   if (accuracy === 100) {
     return streak >= 7
