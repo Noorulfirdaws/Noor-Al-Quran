@@ -59,11 +59,17 @@ function writeAccounts(a: Record<string, StoredAccount>) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  // Restore session
+  // Restore session — and re-assert the admin premium flag, then tell
+  // PremiumContext to re-check (it may have mounted before this ran).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(USER_KEY);
-      if (raw) setUser(JSON.parse(raw));
+      if (raw) {
+        const u = JSON.parse(raw) as AuthUser;
+        setUser(u);
+        if (u?.role === "admin") localStorage.setItem(PREMIUM_KEY, "1");
+        window.dispatchEvent(new Event("noor-premium-changed"));
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -77,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         localStorage.removeItem(USER_KEY);
       }
+      // Notify PremiumContext to re-evaluate immediately (no reload needed).
+      window.dispatchEvent(new Event("noor-premium-changed"));
     } catch { /* ignore */ }
   }, []);
 

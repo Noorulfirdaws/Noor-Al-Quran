@@ -9,7 +9,7 @@ const slides = [
     headline: ["Your Personal", "AI Hifz Teacher."],
     sub: "Listen. Recite. Get instant word-by-word feedback. Memorize faster than ever — available 24/7.",
     cta1: { label: "Start Free Trial", href: "/signup" },
-    cta2: { label: "▶ Watch Live Demo", href: "/demo", accent: true },
+    cta2: { label: "▶ Watch Demo", href: "/demo", accent: true },
     // Pexels video: Quran in Close Up #10816965
     videoSrcs: [
       "https://videos.pexels.com/video-files/10816965/10816965-hd_1920_1080_30fps.mp4",
@@ -162,13 +162,13 @@ export default function HeroPricing() {
           <div className="flex flex-col sm:flex-row gap-3">
             <a
               href={slide.cta1.href}
-              className="inline-flex items-center justify-center bg-white hover:bg-gray-100 text-black font-bold px-8 py-4 rounded-full text-base transition-all active:scale-95"
+              className="inline-flex items-center justify-center whitespace-nowrap bg-white hover:bg-gray-100 text-black font-bold px-8 py-4 rounded-full text-base transition-all active:scale-95"
             >
               {slide.cta1.label}
             </a>
             <a
               href={slide.cta2.href}
-              className="inline-flex items-center justify-center gap-2 font-bold px-8 py-4 rounded-full text-base transition-all active:scale-95"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold px-8 py-4 rounded-full text-base transition-all active:scale-95"
               style={{
                 backgroundColor: slide.accentColor,
                 color: "#000",

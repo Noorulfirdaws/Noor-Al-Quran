@@ -45,10 +45,16 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     check();
-    // Re-check when tab regains focus, and hourly so an expiring promo lapses.
+    // Re-check on focus, hourly (promo expiry), and whenever auth changes premium
+    // status (login / logout / session restore) — so admins never see an upsell.
     window.addEventListener("focus", check);
+    window.addEventListener("noor-premium-changed", check);
     const id = setInterval(check, 60 * 60 * 1000);
-    return () => { window.removeEventListener("focus", check); clearInterval(id); };
+    return () => {
+      window.removeEventListener("focus", check);
+      window.removeEventListener("noor-premium-changed", check);
+      clearInterval(id);
+    };
   }, []);
 
   /**

@@ -166,6 +166,18 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     } catch { /* ignore — recording is best-effort */ }
   }, [surahMeta, surahNumber, reciteStats]);
 
+  // Save the clip whenever recording STOPS — manual stop OR completion — so even
+  // a partial recitation is saved and "Verify with AI" always has audio. (The
+  // completion path also calls saveRecitingClip; it's idempotent.)
+  const wasRecitingRef = useRef(false);
+  useEffect(() => {
+    if (isReciting) { wasRecitingRef.current = true; return; }
+    if (wasRecitingRef.current) {
+      wasRecitingRef.current = false;
+      saveRecitingClip();
+    }
+  }, [isReciting, saveRecitingClip]);
+
   // Show summary once when recitation completes + record per-ayah mistakes
   useEffect(() => {
     if (reciteDone && !summaryShownRef.current) {
