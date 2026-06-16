@@ -15,6 +15,7 @@ export default function SurahPage({ params }: Props) {
   const searchParams = useSearchParams();
   const surahNumber = parseInt(surah, 10);
   const initialAyah = parseInt(searchParams.get("ayah") ?? "1", 10);
+  const startRecite = searchParams.get("recite") === "1";
 
   if (isNaN(surahNumber) || surahNumber < 1 || surahNumber > 114) {
     return (
@@ -34,7 +35,7 @@ export default function SurahPage({ params }: Props) {
         <div className="min-h-screen bg-[#050907]">
           <Navbar />
           <div className="pt-16">
-            <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} />
+            <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} initialRecite={startRecite} />
           </div>
         </div>
       </QuranReaderProvider>

@@ -82,7 +82,7 @@ export default function RecordingsPage() {
         )}
 
         <div className="mt-6">
-          <Link href="/quran" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
+          <Link href="/quran/1?recite=1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
             <Mic size={15} /> Record a Recitation
           </Link>
         </div>
@@ -291,7 +291,7 @@ function EmptyState() {
       <p className="text-white/40 text-sm mb-6 max-w-xs mx-auto">
         Enter Recite mode on any surah and your recitation is automatically recorded — privately, on your device.
       </p>
-      <Link href="/quran/1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
+      <Link href="/quran/1?recite=1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
         <Mic size={15} /> Recite Al-Fatiha
       </Link>
     </div>

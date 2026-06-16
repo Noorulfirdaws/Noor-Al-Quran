@@ -187,7 +187,7 @@ function EmptyState() {
       <p className="text-white/40 text-sm mb-6 max-w-xs mx-auto">
         Recite a surah with AI feedback and the planner will automatically schedule your reviews using spaced repetition.
       </p>
-      <Link href="/quran/1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
+      <Link href="/quran/1?recite=1" className="inline-flex items-center gap-2 bg-[#57d996] text-black font-black px-6 py-3 rounded-full text-sm hover:bg-[#6ff2a8] transition-all">
         <Mic size={15} /> Recite Al-Fatiha
       </Link>
     </div>

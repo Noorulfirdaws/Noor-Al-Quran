@@ -22,9 +22,10 @@ import type { ReaderMode } from "../../types/quran";
 interface Props {
   surahNumber: number;
   initialAyah?: number;
+  initialRecite?: boolean;
 }
 
-export default function SurahReader({ surahNumber, initialAyah }: Props) {
+export default function SurahReader({ surahNumber, initialAyah, initialRecite }: Props) {
   const {
     surahMeta, ayahs, ayahsWithWords, loadingAyahs, loadingWords, errorMsg,
     loadSurah, loadWords, mode, setMode,
@@ -48,6 +49,16 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
     loadSurah(surahNumber);
     scrolledRef.current = false;
   }, [surahNumber, loadSurah]);
+
+  // Deep-link: /quran/N?recite=1 lands directly in Recite mode so "Record a
+  // Recitation" opens the recording screen, not the audio player.
+  const reciteStartedRef = useRef(false);
+  useEffect(() => {
+    if (initialRecite && !reciteStartedRef.current) {
+      reciteStartedRef.current = true;
+      setMode("recite");
+    }
+  }, [initialRecite, setMode]);
 
   // Load word data only for word-by-word mode. Recite mode deliberately uses
   // ayah.text split (consistent with the status array), so it must NOT depend
