@@ -160,6 +160,7 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
     recorderRef.current = null;
     try {
       const out = await rec.stop();
+      const silent = rec.wasSilent();
       if (!out || !surahMeta) return;
       await saveRecording({
         id: `${surahNumber}-${Date.now()}`,
@@ -173,6 +174,7 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
         skipped: reciteStats.skipped,
         blob: out.blob,
         mimeType: out.mimeType,
+        silent,
       });
     } catch { /* ignore — recording is best-effort */ }
   }, [surahMeta, surahNumber, reciteStats]);

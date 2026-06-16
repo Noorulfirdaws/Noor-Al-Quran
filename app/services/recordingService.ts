@@ -20,6 +20,7 @@ export interface RecordingMeta {
   incorrect: number;
   skipped: number;
   mimeType: string;
+  silent?: boolean;   // true if no audio level was detected during capture
 }
 
 export interface RecordingRecord extends RecordingMeta {
@@ -121,11 +122,28 @@ export class RecitationRecorder {
   private startedAt = 0;
   private mimeType = "";
 
+  private silent = false;
+
+  /** True if the captured audio looked silent (helps surface a mic problem). */
+  wasSilent(): boolean { return this.silent; }
+
   async start(): Promise<void> {
     if (!isRecordingSupported()) throw new Error("recording-unsupported");
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Raw capture: disable echo-cancel / noise-suppression / auto-gain. These
+    // processors — especially when the browser's speech recognizer is also using
+    // the mic — can gate quiet recitation down to silence on Windows.
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      } as MediaTrackConstraints,
+    });
     this.mimeType = pickMimeType();
     this.chunks = [];
+    this.silent = false;
+    this.startLevelMonitor(this.stream);
     this.recorder = new MediaRecorder(this.stream, this.mimeType ? { mimeType: this.mimeType } : undefined);
     this.recorder.ondataavailable = (e) => { if (e.data.size > 0) this.chunks.push(e.data); };
     this.recorder.start(1000); // collect in 1s chunks so we never lose everything
@@ -147,7 +165,36 @@ export class RecitationRecorder {
     });
   }
 
+  private audioCtx: AudioContext | null = null;
+  private rafId: number | null = null;
+
+  /** Watch the input level; if it never rises above a tiny floor, the mic was
+   * effectively silent (wrong device, muted, or grabbed by speech recognition). */
+  private startLevelMonitor(stream: MediaStream) {
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext; // eslint-disable-line @typescript-eslint/no-explicit-any
+      this.audioCtx = new AC();
+      const src = this.audioCtx.createMediaStreamSource(stream);
+      const analyser = this.audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      let peak = 0;
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf);
+        for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+        this.silent = peak < 3; // ~zero deflection over the whole take = silence
+        this.rafId = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch { /* monitor is best-effort */ }
+  }
+
   private cleanup() {
+    if (this.rafId != null) cancelAnimationFrame(this.rafId);
+    this.rafId = null;
+    try { this.audioCtx?.close(); } catch { /* ignore */ }
+    this.audioCtx = null;
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     this.recorder = null;

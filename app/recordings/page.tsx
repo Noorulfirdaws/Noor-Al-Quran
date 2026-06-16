@@ -158,6 +158,11 @@ function RecordingRow({ rec, selected, onToggleCompare, onDelete }: {
         <div className="flex items-center gap-3 text-white/35 text-[11px] mt-0.5">
           <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(rec.date).toLocaleDateString()}</span>
           <span className="flex items-center gap-1"><Clock size={10} /> {fmtDuration(rec.durationMs)}</span>
+          {rec.silent && (
+            <span className="flex items-center gap-1 text-red-400" title="No microphone sound was detected during this recording.">
+              ⚠ no sound
+            </span>
+          )}
         </div>
       </div>
 
