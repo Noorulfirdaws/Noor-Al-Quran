@@ -9,7 +9,7 @@ const slides = [
     headline: ["Your Personal", "AI Hifz Teacher."],
     sub: "Listen. Recite. Get instant word-by-word feedback. Memorize faster than ever — available 24/7.",
     cta1: { label: "Start Free Trial", href: "/signup" },
-    cta2: { label: "▶ Watch Demo", href: "/demo", accent: true },
+    cta2: { label: "▶ Try Live", href: "/quran/1?recite=1", accent: true },
     // Pexels video: Quran in Close Up #10816965
     videoSrcs: [
       "https://videos.pexels.com/video-files/10816965/10816965-hd_1920_1080_30fps.mp4",
@@ -38,7 +38,7 @@ const slides = [
     headline: ["Track Your", "Hifz Journey."],
     sub: "XP, streaks, achievements, and a personal dashboard — stay motivated every single day until you complete your Hifz.",
     cta1: { label: "See Plans", href: "/#pricing" },
-    cta2: { label: "▶ Live Demo", href: "/demo", accent: true },
+    cta2: { label: "▶ Try Live", href: "/quran/1?recite=1", accent: true },
     // Pexels: calm aerial #3214448 (the previous video #6994948 was 403'd by Pexels)
     videoSrcs: [
       "https://videos.pexels.com/video-files/3214448/3214448-hd_1920_1080_25fps.mp4",

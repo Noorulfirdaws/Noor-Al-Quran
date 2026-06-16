@@ -20,7 +20,7 @@ export default function Navbar() {
 
   const navLinks = [
     { label: t.navFeatures, href: "/#features" },
-    { label: t.navDemo, href: "/demo" },
+    { label: t.navDemo, href: "/quran/1?recite=1" },
     { label: "Quran", href: "/quran" },
     { label: t.navPricing, href: "/#pricing" },
     { label: "Dashboard", href: "/dashboard" },

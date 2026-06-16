@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Settings, BookOpen, Mic, Brain, ChevronLeft, ChevronRight,
   AlertCircle, Loader2, Volume2, ChevronDown, Check,
@@ -34,6 +35,14 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
     reciteDone, reciteInterim, reciteStats, startReciting, stopReciting, resetRecite,
   } = useQuranReader();
   const { isFeatureAllowed } = usePremium();
+  const router = useRouter();
+
+  const goBack = useCallback(() => {
+    // Return to wherever the user came from (recordings, dashboard, surah list);
+    // fall back to the surah list if there's no in-app history.
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/quran");
+  }, [router]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showReciterMenu, setShowReciterMenu] = useState(false);
@@ -237,14 +246,14 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
 
         {/* Row 1: surah nav + reciter + settings */}
         <div className="max-w-3xl mx-auto px-3 py-2 flex items-center gap-2">
-          <Link
-            href="/quran"
-            title="Back to all surahs"
+          <button
+            onClick={goBack}
+            title="Go back"
             className="flex items-center gap-1 text-white/50 hover:text-white transition-colors py-1 pr-2 pl-1 rounded-lg hover:bg-white/5 flex-shrink-0"
           >
             <ArrowLeft size={18} />
-            <span className="text-xs font-bold hidden sm:inline">Surahs</span>
-          </Link>
+            <span className="text-xs font-bold hidden sm:inline">Back</span>
+          </button>
 
           {/* Surah name */}
           <div className="flex-1 min-w-0">
