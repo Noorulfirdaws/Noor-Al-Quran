@@ -224,8 +224,13 @@ export default function SurahReader({ surahNumber, initialAyah }: Props) {
 
         {/* Row 1: surah nav + reciter + settings */}
         <div className="max-w-3xl mx-auto px-3 py-2 flex items-center gap-2">
-          <Link href="/quran" className="text-white/40 hover:text-white transition-colors p-1 flex-shrink-0">
+          <Link
+            href="/quran"
+            title="Back to all surahs"
+            className="flex items-center gap-1 text-white/50 hover:text-white transition-colors py-1 pr-2 pl-1 rounded-lg hover:bg-white/5 flex-shrink-0"
+          >
             <ArrowLeft size={18} />
+            <span className="text-xs font-bold hidden sm:inline">Surahs</span>
           </Link>
 
           {/* Surah name */}

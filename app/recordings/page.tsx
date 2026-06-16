@@ -3,10 +3,12 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 import {
-  listRecordings, getObjectURL, deleteRecording, fmtDuration,
+  listRecordings, getObjectURL, getRecording, deleteRecording, fmtDuration,
   type RecordingMeta,
 } from "../services/recordingService";
-import { Mic, Play, Pause, Trash2, GitCompare, X, Calendar, Clock } from "lucide-react";
+import { Mic, Play, Pause, Trash2, GitCompare, X, Calendar, Clock, Sparkles, Loader2 } from "lucide-react";
+import { isWhisperSupported, analyzeWithWhisper, type WhisperProgress } from "../services/whisperService";
+import { getSurah } from "../services/quranService";
 
 export default function RecordingsPage() {
   const [recs, setRecs] = useState<RecordingMeta[]>([]);
@@ -110,7 +112,37 @@ function RecordingRow({ rec, selected, onToggleCompare, onDelete }: {
 
   const accColor = rec.accuracy >= 80 ? "text-green-400" : rec.accuracy >= 60 ? "text-yellow-400" : "text-red-400";
 
+  // ── Verify with AI (in-browser Whisper) on this saved clip ──
+  const [verifying, setVerifying] = useState(false);
+  const [vMsg, setVMsg] = useState("");
+  const [vResult, setVResult] = useState<{ accuracy: number; correct: number; missed: number; transcript: string; words: { text: string; status: string }[] } | null>(null);
+  const [vError, setVError] = useState("");
+
+  const verify = async () => {
+    if (!isWhisperSupported()) { setVError("AI verification isn't supported on this browser."); return; }
+    setVerifying(true); setVError(""); setVResult(null);
+    try {
+      const full = await getRecording(rec.id);
+      if (!full) { setVError("Recording unavailable."); return; }
+      const surah = await getSurah(rec.surah);
+      const expected = surah.ayahs.map((a) => a.text).join(" ");
+      const w = await analyzeWithWhisper(full.blob, expected, (p: WhisperProgress) => {
+        if (p.status === "transcribing") setVMsg("Listening to your recitation…");
+        else if (typeof p.progress === "number") setVMsg(`Downloading AI model… ${p.progress}% (one-time)`);
+        else setVMsg("Loading AI…");
+      });
+      setVMsg("");
+      if (!w.ok) { setVError("Could not analyze this recording. Make sure it has audio."); return; }
+      setVResult({ accuracy: w.accuracy, correct: w.correct, missed: w.missed, transcript: w.transcript, words: w.words });
+    } catch {
+      setVError("AI verification failed.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   return (
+   <div className="space-y-0">
     <div className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
       selected ? "bg-[#57d996]/10 border-[#57d996]/30" : "bg-white/4 border-white/8"
     }`}>
@@ -135,6 +167,14 @@ function RecordingRow({ rec, selected, onToggleCompare, onDelete }: {
       </div>
 
       <button
+        onClick={verify}
+        disabled={verifying}
+        title="Verify with AI (real Whisper)"
+        className="p-2 rounded-lg flex-shrink-0 text-[#18c8d8] hover:bg-[#18c8d8]/10 transition-all disabled:opacity-50"
+      >
+        {verifying ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+      </button>
+      <button
         onClick={onToggleCompare}
         title="Compare"
         className={`p-2 rounded-lg flex-shrink-0 transition-all ${selected ? "bg-[#57d996]/20 text-[#57d996]" : "text-white/30 hover:text-white hover:bg-white/8"}`}
@@ -145,6 +185,45 @@ function RecordingRow({ rec, selected, onToggleCompare, onDelete }: {
         <Trash2 size={15} />
       </button>
     </div>
+
+    {/* AI verify status / result */}
+    {(verifying || vResult || vError) && (
+      <div className="mt-1.5 mx-1 bg-[#18c8d8]/8 border border-[#18c8d8]/20 rounded-xl p-3">
+        {verifying && (
+          <p className="text-[#18c8d8] text-xs flex items-center gap-2">
+            <Loader2 size={13} className="animate-spin" /> {vMsg || "Analyzing…"}
+          </p>
+        )}
+        {vError && <p className="text-red-400/80 text-xs">{vError}</p>}
+        {vResult && (
+          <>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-[#18c8d8] font-bold uppercase tracking-widest flex items-center gap-1">
+                <Sparkles size={11} /> AI-Verified
+              </span>
+              <span className={`font-black text-sm ${vResult.accuracy >= 80 ? "text-green-400" : vResult.accuracy >= 60 ? "text-yellow-400" : "text-red-400"}`}>
+                {vResult.accuracy}%
+              </span>
+            </div>
+            <p className="text-white/40 text-[11px] mb-2">{vResult.correct} correct · {vResult.missed} to review</p>
+            {vResult.transcript && (
+              <p className="text-white/35 text-[11px] mb-2" dir="rtl" style={{ fontFamily: "var(--font-quran), serif" }}>
+                Heard: {vResult.transcript}
+              </p>
+            )}
+            {vResult.words.some((w) => w.status !== "correct") && (
+              <div className="flex flex-wrap gap-1.5" dir="rtl">
+                {vResult.words.filter((w) => w.status !== "correct").slice(0, 12).map((w, i) => (
+                  <span key={i} className={`px-2 py-0.5 rounded text-sm font-bold ${w.status === "missed" ? "text-yellow-400 bg-yellow-400/10" : "text-red-400 bg-red-400/10"}`}
+                    style={{ fontFamily: "var(--font-quran), serif" }}>{w.text}</span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )}
+   </div>
   );
 }
 

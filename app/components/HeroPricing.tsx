@@ -159,7 +159,7 @@ export default function HeroPricing() {
             {slide.sub}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             <a
               href={slide.cta1.href}
               className="inline-flex items-center justify-center whitespace-nowrap bg-white hover:bg-gray-100 text-black font-bold px-8 py-4 rounded-full text-base transition-all active:scale-95"
