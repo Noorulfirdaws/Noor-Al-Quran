@@ -28,6 +28,8 @@ function PostCard({ post, featured = false }: { post: typeof blogPosts[0]; featu
             <img
               src={photo}
               alt={post.title}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Dark gradient overlay for chip/text readability */}

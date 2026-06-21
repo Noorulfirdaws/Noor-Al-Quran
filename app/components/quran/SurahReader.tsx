@@ -287,6 +287,8 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
           <div className="relative flex-shrink-0" ref={reciterMenuRef}>
             <button
               onClick={() => setShowReciterMenu(v => !v)}
+              aria-label="Choose reciter"
+              aria-expanded={showReciterMenu}
               className="flex items-center gap-1 text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-lg px-2.5 py-1.5 text-xs max-w-[130px]"
             >
               <Volume2 size={12} className="flex-shrink-0 text-[#57d996]" />
@@ -359,6 +361,7 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
             )}
             <button
               onClick={() => setShowSettings(true)}
+              aria-label="Reader settings"
               className="p-1.5 text-white/30 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               <Settings size={15} />

@@ -156,6 +156,8 @@ export default function SocialProof() {
                 <img
                   src={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
                   alt="Watch video"
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />

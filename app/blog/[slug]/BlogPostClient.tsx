@@ -257,6 +257,8 @@ export default function BlogPostClient({ slug }: { slug: string }) {
                     <img
                       src={blogPhotos[r.slug]}
                       alt={r.title}
+                      loading="lazy"
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   )}
