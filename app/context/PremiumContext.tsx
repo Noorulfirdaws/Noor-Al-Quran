@@ -4,39 +4,55 @@ import type { PremiumFeature } from "../types/quran";
 import { getActivePromo, promoDaysLeft } from "../services/promoService";
 
 const BYPASS_KEY = "noor_admin_premium";
+const FAMILY_KEY = "noor_family_plan"; // set when a Family plan is active
 
-// In production this would check a real subscription API.
-// For now: localStorage — admin bypass OR an unexpired promo/lead-magnet code.
+// ⚠️ CLIENT-SIDE GATING ONLY (demo-grade) — not a security boundary.
+// Real enforcement needs a backend + auth + subscription API. This derives the
+// plan from localStorage: admin/Family flag → "family", an unexpired promo →
+// "premium", otherwise "free".
+
+export type Plan = "free" | "premium" | "family";
+export type ContentTier = "basic" | "premium" | "family";
 
 interface PremiumCtx {
-  isPremium: boolean;
+  isPremium: boolean;          // premium OR family
+  plan: Plan;
   promoLabel: string | null;   // active promo name, if access is via a code
   promoDaysLeft: number;       // whole days left on the promo (0 if none)
   isFeatureAllowed: (feature: PremiumFeature, surahNumber: number) => boolean;
+  /** Can the current plan access content of the given tier? */
+  canAccess: (tier: ContentTier) => boolean;
   refreshPremium: () => void;
 }
 
 const PremiumContext = createContext<PremiumCtx>({
   isPremium: false,
+  plan: "free",
   promoLabel: null,
   promoDaysLeft: 0,
   isFeatureAllowed: () => false,
+  canAccess: () => false,
   refreshPremium: () => {},
 });
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false);
+  const [plan, setPlan] = useState<Plan>("free");
   const [promoLabel, setPromoLabel] = useState<string | null>(null);
   const [daysLeft, setDaysLeft] = useState(0);
 
   const check = () => {
     try {
       const admin = localStorage.getItem(BYPASS_KEY) === "1";
+      const family = localStorage.getItem(FAMILY_KEY) === "1";
       const promo = getActivePromo();
-      setIsPremium(admin || !!promo);
+      const p: Plan = admin || family ? "family" : promo ? "premium" : "free";
+      setPlan(p);
+      setIsPremium(p !== "free");
       setPromoLabel(promo ? promo.label : null);
       setDaysLeft(promo ? promoDaysLeft() : 0);
     } catch {
+      setPlan("free");
       setIsPremium(false);
       setPromoLabel(null);
       setDaysLeft(0);
@@ -73,8 +89,15 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
+  // Content access matrix: basic = everyone, premium = Premium+Family, family = Family only.
+  function canAccess(tier: ContentTier): boolean {
+    if (tier === "basic") return true;
+    if (tier === "premium") return plan === "premium" || plan === "family";
+    return plan === "family"; // family-only
+  }
+
   return (
-    <PremiumContext.Provider value={{ isPremium, promoLabel, promoDaysLeft: daysLeft, isFeatureAllowed, refreshPremium: check }}>
+    <PremiumContext.Provider value={{ isPremium, plan, promoLabel, promoDaysLeft: daysLeft, isFeatureAllowed, canAccess, refreshPremium: check }}>
       {children}
     </PremiumContext.Provider>
   );

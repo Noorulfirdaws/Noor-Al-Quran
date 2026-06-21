@@ -4,8 +4,8 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import BookCover from "../components/BookCover";
-import { products, productCategories } from "../data/products";
-import { Download, Code2 } from "lucide-react";
+import { products, productCategories, productTier } from "../data/products";
+import { Download, Code2, Lock } from "lucide-react";
 
 export default function LibraryPage() {
   const [cat, setCat] = useState<string>("All");
@@ -21,8 +21,8 @@ export default function LibraryPage() {
           <p className="text-[#57d996] text-[10px] font-bold tracking-widest uppercase mb-1">Digital Library</p>
           <h1 className="text-3xl sm:text-4xl font-black leading-tight">The Book Shelf</h1>
           <p className="text-white/50 text-base mt-3 max-w-2xl leading-relaxed">
-            Beautifully designed Islamic books and worship trackers — all free to download, print, and use.
-            Embed any item on your own site too.
+            Beautifully designed Islamic books and worship trackers. The Islamic Legacy books are free to
+            download and print; the worship-tracker programs are part of Premium. Embed any item on your site too.
           </p>
         </div>
       </div>
@@ -49,18 +49,27 @@ export default function LibraryPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12 justify-items-center">
           {filtered.map((p) => (
             <Link key={p.id} href={`/library/${p.slug}`} className="group flex flex-col items-center gap-3 w-44">
-              <BookCover
-                title={p.title}
-                arabicTitle={p.arabicTitle}
-                subtitle={p.subtitle}
-                gradient={p.gradient}
-                accent={p.accent}
-                pattern={p.pattern}
-              />
+              <div className="relative">
+                <BookCover
+                  title={p.title}
+                  arabicTitle={p.arabicTitle}
+                  subtitle={p.subtitle}
+                  gradient={p.gradient}
+                  accent={p.accent}
+                  pattern={p.pattern}
+                />
+                {productTier(p) !== "basic" && (
+                  <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#f7ca45] text-black shadow-lg">
+                    <Lock size={9} /> {productTier(p) === "family" ? "Family" : "Premium"}
+                  </span>
+                )}
+              </div>
               <div className="text-center">
                 <p className="text-white text-sm font-bold leading-snug group-hover:text-[#57d996] transition-colors line-clamp-2">{p.title}</p>
                 <div className="flex items-center justify-center gap-2 mt-1 text-[10px] text-white/35">
-                  <span className="inline-flex items-center gap-1"><Download size={9} /> {p.price}</span>
+                  <span className="inline-flex items-center gap-1">
+                    {productTier(p) === "basic" ? <><Download size={9} /> {p.price}</> : <><Lock size={9} /> {productTier(p) === "family" ? "Family" : "Premium"}</>}
+                  </span>
                   <span>·</span>
                   <span>{p.type}</span>
                 </div>

@@ -2,17 +2,23 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Printer, FileText, Check, Copy, Code2 } from "lucide-react";
+import { ArrowLeft, Printer, FileText, Check, Copy, Code2, Lock } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import BookCover from "../../components/BookCover";
-import { getProduct, products } from "../../data/products";
+import UpgradeModal from "../../components/UpgradeModal";
+import { getProduct, products, productTier } from "../../data/products";
+import { usePremium } from "../../context/PremiumContext";
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const product = getProduct(slug);
   if (!product) notFound();
 
+  const { canAccess } = usePremium();
+  const tier = productTier(product);
+  const locked = !canAccess(tier);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [copied, setCopied] = useState(false);
   const embedCode = `<iframe src="https://noor-ul-quran.com/embed/bookshelf?slug=${product.slug}" width="320" height="460" style="border:0" loading="lazy"></iframe>`;
 
@@ -82,15 +88,31 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 </ul>
               </div>
 
+              {/* Tier badge */}
+              {tier !== "basic" && (
+                <div className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f7ca45]/10 border border-[#f7ca45]/30 text-[#f7ca45]">
+                  <Lock size={11} /> {tier === "family" ? "Family plan" : "Premium"}
+                </div>
+              )}
+
               {/* Actions */}
-              <div className="flex flex-wrap gap-3 mt-8">
-                <Link
-                  href={`/library/${product.slug}/print`}
-                  className="inline-flex items-center gap-2 font-black px-6 py-3 rounded-full text-sm transition-all active:scale-95"
-                  style={{ backgroundColor: product.accent, color: "#04140c" }}
-                >
-                  <Printer size={15} /> {product.type === "Book" ? "Open & download" : "Open printable"}
-                </Link>
+              <div className="flex flex-wrap gap-3 mt-6">
+                {locked ? (
+                  <button
+                    onClick={() => setShowUpgrade(true)}
+                    className="inline-flex items-center gap-2 font-black px-6 py-3 rounded-full text-sm transition-all active:scale-95 bg-[#f7ca45] text-black hover:bg-[#ffd95e]"
+                  >
+                    <Lock size={15} /> Unlock with {tier === "family" ? "Family" : "Premium"}
+                  </button>
+                ) : (
+                  <Link
+                    href={`/library/${product.slug}/print`}
+                    className="inline-flex items-center gap-2 font-black px-6 py-3 rounded-full text-sm transition-all active:scale-95"
+                    style={{ backgroundColor: product.accent, color: "#04140c" }}
+                  >
+                    <Printer size={15} /> {product.type === "Book" ? "Open & download" : "Open printable"}
+                  </Link>
+                )}
               </div>
 
               {/* Embed */}
@@ -127,6 +149,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           )}
         </div>
       </div>
+
+      {showUpgrade && (
+        <UpgradeModal
+          requiredTier={tier === "family" ? "family" : "premium"}
+          contentLabel={`"${product.title}"`}
+          onClose={() => setShowUpgrade(false)}
+        />
+      )}
 
       <Footer />
     </div>
