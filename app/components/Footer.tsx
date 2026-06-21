@@ -54,7 +54,7 @@ export default function Footer() {
         { label: t.footerPricing, href: "/#pricing" },
         { label: t.footerGiftCards, href: "/#gift-cards" },
         { label: t.footerFamilyPlan, href: "/#pricing" },
-        { label: t.footerPremiumFeatures, href: "/#features" },
+        { label: t.footerPremiumFeatures, href: "/#premium-features" },
       ],
     },
     {
@@ -72,7 +72,7 @@ export default function Footer() {
       links: [
         { label: t.footerPodcast, href: "/#community" },
         { label: t.footerNetwork, href: "/hifz-network" },
-        { label: t.footerDiscord, href: "/support" },
+        { label: t.footerDiscord, href: "https://discord.com", external: true },
         { label: t.footerRamadan, href: "/ramadan-hub" },
       ],
     },
@@ -134,13 +134,20 @@ export default function Footer() {
             <div key={col.heading}>
               <h4 className="text-white font-black text-sm mb-4 tracking-wide">{col.heading}</h4>
               <ul className="flex flex-col gap-2.5">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <a href={l.href} className="text-gray-500 hover:text-white text-sm transition-colors">
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
+                {col.links.map((l) => {
+                  const external = "external" in l && (l as { external?: boolean }).external;
+                  return (
+                    <li key={l.label}>
+                      <a
+                        href={l.href}
+                        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                        className="text-gray-500 hover:text-white text-sm transition-colors"
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

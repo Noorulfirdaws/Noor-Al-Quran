@@ -275,7 +275,7 @@ export default function PremiumFeatures() {
   }, []);
 
   return (
-    <section id="features" className="bg-[#f4f5f7] py-20 overflow-hidden">
+    <section id="premium-features" className="bg-[#f4f5f7] py-20 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-end justify-between mb-10 gap-4">
           <div>
