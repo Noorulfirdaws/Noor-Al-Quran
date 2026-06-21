@@ -400,6 +400,11 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Apply playback speed live — changing it mid-recitation takes effect at once.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = settings.playbackRate || 1;
+  }, [settings.playbackRate]);
+
   // ── Audio helpers ────────────────────────────────────────────────────────────
 
   const resetAudioState = useCallback(() => {
@@ -444,6 +449,7 @@ export function QuranReaderProvider({ children }: { children: ReactNode }) {
 
     const attach = (srcUrl: string) => {
       el.src = srcUrl;
+      el.playbackRate = settingsRef.current.playbackRate || 1;
 
       el.onplaying = () => { setIsAudioLoading(false); setIsPlaying(true); };
       el.onwaiting = () => { setIsAudioLoading(true); setIsPlaying(false); };

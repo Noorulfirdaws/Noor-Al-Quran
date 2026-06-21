@@ -1,5 +1,5 @@
 "use client";
-import { Play, Pause, SkipBack, SkipForward, Repeat, X, Loader2, AlertCircle } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Repeat, X, Loader2, AlertCircle, Gauge, ChevronsDown } from "lucide-react";
 import { useQuranReader } from "../../context/QuranReaderContext";
 import { usePremium } from "../../context/PremiumContext";
 import { getReciterById } from "../../services/audioService";
@@ -32,6 +32,12 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
 
   const canRepeat = isFeatureAllowed("audio-repeat", surahNumber);
   const repeatActive = settings.repeatMode !== "off";
+
+  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const cycleSpeed = () => {
+    const i = SPEEDS.indexOf(settings.playbackRate);
+    updateSettings({ playbackRate: SPEEDS[(i + 1) % SPEEDS.length] });
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0d1a12]/97 backdrop-blur-md border-t border-[#57d996]/15 px-4 py-3">
@@ -88,8 +94,29 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           </button>
         </div>
 
-        {/* Repeat + stop */}
-        <div className="flex items-center gap-2">
+        {/* Speed + follow + repeat + stop */}
+        <div className="flex items-center gap-1.5">
+          {/* Playback speed */}
+          <button
+            onClick={cycleSpeed}
+            title="Playback speed"
+            className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+          >
+            <Gauge size={14} />
+            <span className="text-[10px] font-black tabular-nums">{settings.playbackRate}×</span>
+          </button>
+
+          {/* Auto-scroll follow */}
+          <button
+            onClick={() => updateSettings({ autoScroll: !settings.autoScroll })}
+            title={settings.autoScroll ? "Auto-scroll: ON (follows recitation)" : "Auto-scroll: OFF"}
+            className={`p-2 rounded-lg transition-all ${
+              settings.autoScroll ? "bg-[#57d996]/20 text-[#57d996]" : "text-white/30 hover:text-white/60"
+            }`}
+          >
+            <ChevronsDown size={15} />
+          </button>
+
           <button
             disabled={!canRepeat}
             onClick={() =>

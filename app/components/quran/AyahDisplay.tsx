@@ -20,6 +20,8 @@ interface Props {
   surahNumber: number;
   surahName: string;
   isHighlighted: boolean;
+  audioFollow?: "current" | "prev" | "next" | null;
+  isPlaying?: boolean;
   isWordByWord: boolean;
   isMemorization: boolean;
   isRecite?: boolean;
@@ -31,7 +33,7 @@ interface Props {
 
 export default function AyahDisplay({
   ayah, ayahWithWords, surahNumber, surahName,
-  isHighlighted, isWordByWord, isMemorization,
+  isHighlighted, audioFollow = null, isPlaying = false, isWordByWord, isMemorization,
   isRecite = false, reciteWordOffset = 0, reciteWordStatuses = [], reciteWordConfidences = [], reciteWordCursor = 0,
 }: Props) {
   const { settings, playAyah, selectedWord, setSelectedWord, setHighlightedAyah, revealedWords, revealWord } =
@@ -181,12 +183,23 @@ export default function AyahDisplay({
     );
   };
 
+  // Audio-follow visual states: the recited ayah glows, the just-finished one
+  // fades, the upcoming one gets a subtle marker so the eye is ready for it.
+  const followClass =
+    audioFollow === "current"
+      ? `bg-[#57d996]/12 border-l-2 border-l-[#57d996] shadow-[inset_0_0_30px_rgba(87,217,150,0.06)] ${isPlaying ? "ring-1 ring-[#57d996]/25" : ""}`
+      : audioFollow === "prev"
+      ? "bg-[#57d996]/[0.03] border-l-2 border-l-[#57d996]/30"
+      : audioFollow === "next"
+      ? "border-l-2 border-l-[#57d996]/20"
+      : isHighlighted
+      ? "bg-[#57d996]/8 border-l-2 border-l-[#57d996]"
+      : "hover:bg-white/[0.015]";
+
   return (
     <div
       id={`ayah-${ayah.numberInSurah}`}
-      className={`group px-4 sm:px-6 py-3 border-b border-white/[0.04] transition-all duration-200 ${
-        isHighlighted ? "bg-[#57d996]/8 border-l-2 border-l-[#57d996]" : "hover:bg-white/[0.015]"
-      }`}
+      className={`group px-4 sm:px-6 py-3 border-b border-white/[0.04] transition-all duration-300 scroll-mt-36 ${followClass}`}
       onClick={() => setHighlightedAyah(ayah.numberInSurah)}
     >
       {/* Stacked layout: Arabic right-aligned (every verse hugs the right edge),

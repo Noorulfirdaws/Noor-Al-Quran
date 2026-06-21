@@ -66,6 +66,8 @@ export interface ReaderSettings {
   reciterId: string;
   repeatMode: RepeatMode;
   repeatCount: number;       // number of times to repeat
+  playbackRate: number;      // 0.5 | 0.75 | 1 | 1.25 | 1.5 | 2
+  autoScroll: boolean;       // follow the recited ayah and keep it near the top
 }
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
@@ -76,6 +78,8 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   reciterId: "everyayah.alafasy",
   repeatMode: "off",
   repeatCount: 3,
+  playbackRate: 1,
+  autoScroll: true,
 };
 
 // ─── Bookmarks / Progress ────────────────────────────────────────────────────

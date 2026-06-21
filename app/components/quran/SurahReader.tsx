@@ -31,6 +31,7 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
     surahMeta, ayahs, ayahsWithWords, loadingAyahs, loadingWords, errorMsg,
     loadSurah, loadWords, mode, setMode,
     highlightedAyah, setSelectedWord, settings, updateSettings,
+    playingAyah, isPlaying,
     speechSupported, isReciting, reciteWordStatuses, reciteWordConfidences, reciteWordCursor,
     reciteDone, reciteInterim, reciteStats, startReciting, stopReciting, resetRecite,
   } = useQuranReader();
@@ -100,6 +101,19 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
       document.getElementById(`ayah-${initialAyah}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 300);
   }, [initialAyah, ayahs.length]);
+
+  // ── Audio Follow Mode ──────────────────────────────────────────────────────
+  // While audio plays, keep the recited ayah near the TOP of the reading area
+  // (below the sticky headers), so the upcoming ayahs stay visible. Smooth, and
+  // only fires when the active ayah actually changes — no jump/flicker.
+  useEffect(() => {
+    if (!settings.autoScroll || playingAyah == null) return;
+    const el = document.getElementById(`ayah-${playingAyah}`);
+    if (!el) return;
+    const OFFSET = 150; // navbar (4rem) + reader sticky header (~6rem) breathing room
+    const y = el.getBoundingClientRect().top + window.scrollY - OFFSET;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }, [playingAyah, settings.autoScroll]);
 
   // Close reciter menu on outside click
   useEffect(() => {
@@ -515,6 +529,14 @@ export default function SurahReader({ surahNumber, initialAyah, initialRecite }:
                 surahNumber={surahNumber}
                 surahName={surahMeta?.englishName ?? ""}
                 isHighlighted={highlightedAyah === ayah.numberInSurah}
+                audioFollow={
+                  playingAyah == null ? null
+                  : ayah.numberInSurah === playingAyah ? "current"
+                  : ayah.numberInSurah === playingAyah - 1 ? "prev"
+                  : ayah.numberInSurah === playingAyah + 1 ? "next"
+                  : null
+                }
+                isPlaying={isPlaying}
                 isWordByWord={showWordByWord}
                 isMemorization={showMemorization}
                 isRecite={showRecite}
