@@ -66,6 +66,7 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           <button
             onClick={handlePrev}
             disabled={currentAyah <= 1 || isAudioLoading}
+            aria-label="Previous ayah"
             className="text-white/40 hover:text-white disabled:opacity-20 transition-colors p-1"
           >
             <SkipBack size={18} />
@@ -74,6 +75,7 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           <button
             onClick={handlePlayPause}
             disabled={isAudioLoading}
+            aria-label={isPlaying ? "Pause" : "Play"}
             className="w-11 h-11 rounded-full bg-[#57d996] hover:bg-[#6ff2a8] text-black flex items-center justify-center transition-all active:scale-95 disabled:opacity-60"
           >
             {isAudioLoading ? (
@@ -88,6 +90,7 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           <button
             onClick={handleNext}
             disabled={currentAyah >= totalAyahs || isAudioLoading}
+            aria-label="Next ayah"
             className="text-white/40 hover:text-white disabled:opacity-20 transition-colors p-1"
           >
             <SkipForward size={18} />
@@ -100,6 +103,7 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           <button
             onClick={cycleSpeed}
             title="Playback speed"
+            aria-label={`Playback speed ${settings.playbackRate}×`}
             className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
           >
             <Gauge size={14} />
@@ -110,6 +114,8 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
           <button
             onClick={() => updateSettings({ autoScroll: !settings.autoScroll })}
             title={settings.autoScroll ? "Auto-scroll: ON (follows recitation)" : "Auto-scroll: OFF"}
+            aria-label={settings.autoScroll ? "Turn auto-scroll off" : "Turn auto-scroll on"}
+            aria-pressed={settings.autoScroll}
             className={`p-2 rounded-lg transition-all ${
               settings.autoScroll ? "bg-[#57d996]/20 text-[#57d996]" : "text-white/30 hover:text-white/60"
             }`}
@@ -142,6 +148,7 @@ export default function AudioPlayer({ surahNumber, totalAyahs }: Props) {
             onClick={stopAudio}
             className="text-white/30 hover:text-white/60 transition-colors p-1"
             title="Stop"
+            aria-label="Stop playback"
           >
             <X size={16} />
           </button>

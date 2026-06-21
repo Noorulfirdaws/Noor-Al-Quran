@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /demo
-Disallow: /api/
-
-Sitemap: https://noor-ul-quran.com/sitemap.xml

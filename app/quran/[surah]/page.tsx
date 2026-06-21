@@ -3,7 +3,6 @@ import { use } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import SurahReader from "../../components/quran/SurahReader";
-import { PremiumProvider } from "../../context/PremiumContext";
 import { QuranReaderProvider } from "../../context/QuranReaderContext";
 
 interface Props {
@@ -29,16 +28,15 @@ export default function SurahPage({ params }: Props) {
   }
 
   return (
-    <PremiumProvider>
-      <QuranReaderProvider>
-        {/* bg-[#050907] on wrapper prevents white body bleed-through */}
-        <div className="min-h-screen bg-[#050907]">
-          <Navbar />
-          <div className="pt-16">
-            <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} initialRecite={startRecite} />
-          </div>
+    // PremiumProvider is app-wide (in layout) — no need to wrap again here.
+    <QuranReaderProvider>
+      {/* bg-[#050907] on wrapper prevents white body bleed-through */}
+      <div className="min-h-screen bg-[#050907]">
+        <Navbar />
+        <div className="pt-16">
+          <SurahReader surahNumber={surahNumber} initialAyah={initialAyah} initialRecite={startRecite} />
         </div>
-      </QuranReaderProvider>
-    </PremiumProvider>
+      </div>
+    </QuranReaderProvider>
   );
 }
