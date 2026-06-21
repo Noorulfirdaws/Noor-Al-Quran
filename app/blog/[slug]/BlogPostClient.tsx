@@ -7,35 +7,103 @@ import { blogPosts, blogPhotos } from "../../data/siteData";
 import { ArrowLeft, Clock, User, Sun, Moon } from "lucide-react";
 import { useLang } from "../../context/LanguageContext";
 
+// Slugify a heading into a stable anchor id.
+function slug(text: string): string {
+  return text.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60);
+}
+
+// Extract `## ` headings for the table of contents.
+export function extractHeadings(content: string): { id: string; text: string }[] {
+  return content.split("\n")
+    .filter((l) => l.startsWith("## "))
+    .map((l) => ({ text: l.slice(3).trim(), id: slug(l.slice(3)) }));
+}
+
+// Inline bold/italic.
+function inline(line: string) {
+  return line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, j) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={j}>{part.slice(1, -1)}</em>;
+    return <span key={j}>{part}</span>;
+  });
+}
+
+function youtubeId(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/) || url.match(/^([\w-]{11})$/);
+  return m ? m[1] : null;
+}
+
+// Block-aware renderer. Custom blocks (each on its own line):
+//   ::youtube <url|id>       → responsive embed
+//   ::callout <text>         → highlighted info box
+//   ::quote <text>  (or `> `) → blockquote
+//   ::resource <label>|<url> → download/open card (PDFs, worksheets)
 function renderContent(content: string, dark: boolean) {
   const lines = content.split("\n");
   return lines.map((line, i) => {
-    if (line.startsWith("## ")) {
+    // ── YouTube ──
+    if (line.startsWith("::youtube ")) {
+      const id = youtubeId(line.slice(10).trim());
+      if (!id) return null;
       return (
-        <h2 key={i} className="text-xl sm:text-2xl font-black mt-7 mb-2">{line.slice(3)}</h2>
+        <div key={i} className="my-5 rounded-2xl overflow-hidden border" style={{ borderColor: dark ? "#2a2a2a" : "#e5e7eb" }}>
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <iframe className="absolute inset-0 w-full h-full" src={`https://www.youtube-nocookie.com/embed/${id}`}
+              title="YouTube video" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+          </div>
+        </div>
       );
+    }
+    // ── Callout ──
+    if (line.startsWith("::callout ")) {
+      return (
+        <div key={i} className="my-5 flex gap-3 p-4 rounded-2xl" style={{ backgroundColor: dark ? "#10241a" : "#ecfdf5", border: "1px solid #57d99640" }}>
+          <span className="text-lg flex-shrink-0">💡</span>
+          <p className="text-sm sm:text-base leading-relaxed">{inline(line.slice(10))}</p>
+        </div>
+      );
+    }
+    // ── Quote ──
+    if (line.startsWith("::quote ") || line.startsWith("> ")) {
+      const text = line.startsWith("> ") ? line.slice(2) : line.slice(8);
+      return (
+        <blockquote key={i} className="my-5 pl-4 italic text-base sm:text-lg" style={{ borderLeft: "3px solid #57d996", color: dark ? "#cbd5e1" : "#475569" }}>
+          {inline(text)}
+        </blockquote>
+      );
+    }
+    // ── Resource / PDF download card ──
+    if (line.startsWith("::resource ")) {
+      const [label, url] = line.slice(11).split("|").map((s) => s.trim());
+      if (!url) return null;
+      return (
+        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+          className="my-5 flex items-center gap-3 p-4 rounded-2xl transition-all hover:scale-[1.01]"
+          style={{ backgroundColor: dark ? "#1a1a1a" : "#f8f9fa", border: `1px solid ${dark ? "#2a2a2a" : "#e5e7eb"}` }}>
+          <div className="w-10 h-10 rounded-xl bg-[#57d996]/15 border border-[#57d996]/30 flex items-center justify-center flex-shrink-0">📄</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate">{label || "Download resource"}</p>
+            <p className="text-xs opacity-50">Open / download (PDF)</p>
+          </div>
+          <span className="text-[#57d996] text-sm font-bold flex-shrink-0">Open →</span>
+        </a>
+      );
+    }
+
+    if (line.startsWith("## ")) {
+      const text = line.slice(3);
+      return <h2 key={i} id={slug(text)} className="text-xl sm:text-2xl font-black mt-7 mb-2 scroll-mt-24">{text}</h2>;
     }
     if (line.startsWith("# ")) {
-      return (
-        <h1 key={i} className="text-2xl sm:text-3xl font-black mt-6 mb-2">{line.slice(2)}</h1>
-      );
+      return <h1 key={i} className="text-2xl sm:text-3xl font-black mt-6 mb-2">{line.slice(2)}</h1>;
     }
     if (line.trim() === "") return <div key={i} className="h-2" />;
-
-    const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-    const rendered = parts.map((part, j) => {
-      if (part.startsWith("**") && part.endsWith("**"))
-        return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
-      if (part.startsWith("*") && part.endsWith("*"))
-        return <em key={j}>{part.slice(1, -1)}</em>;
-      return <span key={j}>{part}</span>;
-    });
 
     if (/^\d+\./.test(line)) {
       return (
         <div key={i} className="flex gap-2.5 mb-1.5">
           <span className="font-bold text-[#57d996] flex-shrink-0 text-sm">{line.match(/^\d+/)![0]}.</span>
-          <p className="text-sm sm:text-base leading-relaxed">{rendered}</p>
+          <p className="text-sm sm:text-base leading-relaxed">{inline(line.replace(/^\d+\.\s*/, ""))}</p>
         </div>
       );
     }
@@ -43,14 +111,12 @@ function renderContent(content: string, dark: boolean) {
       return (
         <div key={i} className="flex gap-2.5 mb-1.5">
           <span className="text-[#57d996] flex-shrink-0 mt-0.5 text-sm">•</span>
-          <p className="text-sm sm:text-base leading-relaxed">{rendered}</p>
+          <p className="text-sm sm:text-base leading-relaxed">{inline(line.slice(2))}</p>
         </div>
       );
     }
 
-    return (
-      <p key={i} className="text-sm sm:text-base leading-relaxed">{rendered}</p>
-    );
+    return <p key={i} className="text-sm sm:text-base leading-relaxed">{inline(line)}</p>;
   });
 }
 
@@ -131,6 +197,29 @@ export default function BlogPostClient({ slug }: { slug: string }) {
             {post.excerpt}
           </p>
         )}
+
+        {(() => {
+          const toc = extractHeadings(post.content || "");
+          if (toc.length < 2) return null;
+          return (
+            <nav
+              aria-label="Table of contents"
+              className="mb-7 p-4 rounded-2xl"
+              style={{ backgroundColor: dark ? "#1a1a1a" : "#f8f9fa", border: `1px solid ${dark ? "#2a2a2a" : "#e5e7eb"}` }}
+            >
+              <p className="text-[10px] font-black tracking-widest uppercase mb-2.5 opacity-50">In this article</p>
+              <ul className="space-y-1.5">
+                {toc.map((h) => (
+                  <li key={h.id}>
+                    <a href={`#${h.id}`} className="text-sm hover:text-[#57d996] transition-colors flex items-start gap-2">
+                      <span className="text-[#57d996] flex-shrink-0">›</span> {h.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          );
+        })()}
 
         <div className="space-y-1">
           {renderContent(post.content || "", dark)}
