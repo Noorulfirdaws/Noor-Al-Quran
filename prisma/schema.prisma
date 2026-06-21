@@ -1,0 +1,97 @@
+// Subscription backend schema (#2 & #7). See docs/SUBSCRIPTION_BACKEND_PLAN.md.
+// Not yet wired into the app — provision a DB (DATABASE_URL) + `npm i prisma
+// @prisma/client`, then `npx prisma migrate dev` to bring it to life.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+  FAMILY
+}
+
+enum SubStatus {
+  active
+  past_due
+  canceled
+  incomplete
+}
+
+enum GiftStatus {
+  UNREDEEMED
+  REDEEMED
+  EXPIRED
+}
+
+enum FamilyRole {
+  PARENT
+  CHILD
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String?
+  name         String?
+  role         String        @default("user")
+  createdAt    DateTime      @default(now())
+
+  subscription Subscription?
+  familyLinks  FamilyMember[]
+  ownedFamily  Family?       @relation("FamilyOwner")
+  giftsRedeemed GiftCard[]   @relation("RedeemedBy")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 Plan      @default(FREE)
+  status               SubStatus @default(active)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  currentPeriodEnd     DateTime?
+  updatedAt            DateTime  @updatedAt
+}
+
+model GiftCard {
+  id             String     @id @default(cuid())
+  code           String     @unique
+  plan           Plan
+  months         Int        @default(1)
+  status         GiftStatus @default(UNREDEEMED)
+  purchaserEmail String?
+  recipientEmail String?
+  redeemedByUserId String?
+  redeemedBy     User?      @relation("RedeemedBy", fields: [redeemedByUserId], references: [id])
+  createdAt      DateTime   @default(now())
+  redeemedAt     DateTime?
+}
+
+model Family {
+  id          String         @id @default(cuid())
+  name        String?
+  ownerUserId String         @unique
+  owner       User           @relation("FamilyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members     FamilyMember[]
+  createdAt   DateTime       @default(now())
+}
+
+model FamilyMember {
+  id        String     @id @default(cuid())
+  familyId  String
+  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      FamilyRole @default(CHILD)
+  joinedAt  DateTime   @default(now())
+
+  @@unique([familyId, userId])
+}
