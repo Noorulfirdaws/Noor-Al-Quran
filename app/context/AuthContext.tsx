@@ -1,125 +1,113 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
-// ─── Browser-based auth (demo) ────────────────────────────────────────────────
-// This is a client-side account system backed by localStorage — it lets users
-// sign up and enter the web app directly (no app download). It is NOT real
-// security; a production build would back this with a server + database.
+// ─── Auth (real backend) ──────────────────────────────────────────────────────
+// Talks to /api/auth/* which persist to Postgres with bcrypt + httpOnly JWT
+// sessions. The session cookie is httpOnly (not readable here) — we learn who
+// the user is by calling /api/auth/me.
 
 export type Role = "user" | "admin";
+export type Plan = "free" | "premium" | "family";
 
 export interface AuthUser {
-  name: string;
+  id: string;
   email: string;
+  name: string | null;
   role: Role;
-  createdAt: number;
 }
 
-interface StoredAccount {
-  name: string;
-  email: string;
-  role: Role;
-  pass: string; // obfuscated (demo only — not secure)
-}
+type Result = { ok: true } | { ok: false; error: string };
 
 interface AuthCtx {
   user: AuthUser | null;
+  plan: Plan;
   isAuthed: boolean;
   isAdmin: boolean;
-  signUp: (p: { name: string; email: string; password: string; role: Role }) =>
-    { ok: true } | { ok: false; error: string };
-  login: (p: { email: string; password: string }) =>
-    { ok: true } | { ok: false; error: string };
-  logout: () => void;
+  loading: boolean;
+  signUp: (p: { name: string; email: string; password: string }) => Promise<Result>;
+  login: (p: { email: string; password: string }) => Promise<Result>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
-
-const USER_KEY = "noor_auth_user";
-const ACCOUNTS_KEY = "noor_auth_accounts";
-const PREMIUM_KEY = "noor_admin_premium"; // shared with PremiumContext
-
-const obfuscate = (s: string) => (typeof window !== "undefined" ? btoa(unescape(encodeURIComponent(s))) : s);
 
 const AuthContext = createContext<AuthCtx>({
   user: null,
+  plan: "free",
   isAuthed: false,
   isAdmin: false,
-  signUp: () => ({ ok: false, error: "not ready" }),
-  login: () => ({ ok: false, error: "not ready" }),
-  logout: () => {},
+  loading: true,
+  signUp: async () => ({ ok: false, error: "not ready" }),
+  login: async () => ({ ok: false, error: "not ready" }),
+  logout: async () => {},
+  refresh: async () => {},
 });
-
-function readAccounts(): Record<string, StoredAccount> {
-  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "{}"); }
-  catch { return {}; }
-}
-function writeAccounts(a: Record<string, StoredAccount>) {
-  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a)); } catch { /* ignore */ }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [plan, setPlan] = useState<Plan>("free");
+  const [loading, setLoading] = useState(true);
 
-  // Restore session — and re-assert the admin premium flag, then tell
-  // PremiumContext to re-check (it may have mounted before this ran).
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     try {
-      const raw = localStorage.getItem(USER_KEY);
-      if (raw) {
-        const u = JSON.parse(raw) as AuthUser;
-        setUser(u);
-        if (u?.role === "admin") localStorage.setItem(PREMIUM_KEY, "1");
-        window.dispatchEvent(new Event("noor-premium-changed"));
-      }
-    } catch { /* ignore */ }
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const data = await res.json();
+      setUser(data.user ?? null);
+      setPlan((data.plan as Plan) ?? "free");
+    } catch {
+      setUser(null);
+      setPlan("free");
+    } finally {
+      setLoading(false);
+      // Let PremiumContext re-read the plan from here.
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("noor-premium-changed"));
+    }
   }, []);
 
-  const persist = useCallback((u: AuthUser | null) => {
-    setUser(u);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const signUp = useCallback<AuthCtx["signUp"]>(async (p) => {
     try {
-      if (u) {
-        localStorage.setItem(USER_KEY, JSON.stringify(u));
-        // Super Admins unlock all premium features (read by PremiumContext).
-        if (u.role === "admin") localStorage.setItem(PREMIUM_KEY, "1");
-      } else {
-        localStorage.removeItem(USER_KEY);
-      }
-      // Notify PremiumContext to re-evaluate immediately (no reload needed).
+      const res = await fetch("/api/auth/signup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || "Could not create your account." };
+      setUser(data.user); setPlan((data.plan as Plan) ?? "free");
       window.dispatchEvent(new Event("noor-premium-changed"));
-    } catch { /* ignore */ }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Network error. Please try again." };
+    }
   }, []);
 
-  const signUp: AuthCtx["signUp"] = useCallback((p) => {
-    const email = p.email.trim().toLowerCase();
-    if (!p.name.trim()) return { ok: false, error: "Please enter your name." };
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "Please enter a valid email." };
-    if (p.password.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+  const login = useCallback<AuthCtx["login"]>(async (p) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || "Could not log in." };
+      setUser(data.user); setPlan((data.plan as Plan) ?? "free");
+      window.dispatchEvent(new Event("noor-premium-changed"));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Network error. Please try again." };
+    }
+  }, []);
 
-    const accounts = readAccounts();
-    if (accounts[email]) return { ok: false, error: "An account with this email already exists. Try logging in." };
-
-    accounts[email] = { name: p.name.trim(), email, role: p.role, pass: obfuscate(p.password) };
-    writeAccounts(accounts);
-    persist({ name: p.name.trim(), email, role: p.role, createdAt: Date.now() });
-    return { ok: true };
-  }, [persist]);
-
-  const login: AuthCtx["login"] = useCallback((p) => {
-    const email = p.email.trim().toLowerCase();
-    const accounts = readAccounts();
-    const acc = accounts[email];
-    if (!acc) return { ok: false, error: "No account found for this email. Please sign up." };
-    if (acc.pass !== obfuscate(p.password)) return { ok: false, error: "Incorrect password." };
-    persist({ name: acc.name, email: acc.email, role: acc.role, createdAt: Date.now() });
-    return { ok: true };
-  }, [persist]);
-
-  const logout = useCallback(() => {
-    persist(null);
-    try { localStorage.removeItem(PREMIUM_KEY); } catch { /* ignore */ }
-  }, [persist]);
+  const logout = useCallback(async () => {
+    try { await fetch("/api/auth/logout", { method: "POST" }); } catch { /* ignore */ }
+    setUser(null); setPlan("free");
+    window.dispatchEvent(new Event("noor-premium-changed"));
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthed: !!user, isAdmin: user?.role === "admin", signUp, login, logout }}>
+    <AuthContext.Provider value={{
+      user, plan, isAuthed: !!user, isAdmin: user?.role === "admin",
+      loading, signUp, login, logout, refresh,
+    }}>
       {children}
     </AuthContext.Provider>
   );

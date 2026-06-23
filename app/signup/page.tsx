@@ -2,9 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, ShieldCheck, BookOpen, Check, ArrowRight } from "lucide-react";
+import { User, Mail, Lock, Check, ArrowRight } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { useAuth, type Role } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,17 +12,16 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("user");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setBusy(true);
-    const res = signUp({ name, email, password, role });
+    const res = await signUp({ name, email, password });
     if (!res.ok) { setError(res.error); setBusy(false); return; }
-    // Straight into the web app — no app download required.
+    // Real account created + logged in — straight into the app.
     router.push("/quran");
   };
 
@@ -38,32 +37,9 @@ export default function SignupPage() {
           </div>
 
           <form onSubmit={submit} className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-4">
-            {/* Account type */}
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setRole("user")}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border text-center transition-all ${role === "user" ? "border-[#57d996] bg-[#57d996]/10" : "border-white/10 hover:border-white/25"}`}>
-                <BookOpen size={18} className={role === "user" ? "text-[#57d996]" : "text-white/50"} />
-                <span className="text-xs font-bold">Free account</span>
-                <span className="text-[10px] text-white/40">Read & recite</span>
-              </button>
-              <button type="button" onClick={() => setRole("admin")}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border text-center transition-all ${role === "admin" ? "border-[#f7ca45] bg-[#f7ca45]/10" : "border-white/10 hover:border-white/25"}`}>
-                <ShieldCheck size={18} className={role === "admin" ? "text-[#f7ca45]" : "text-white/50"} />
-                <span className="text-xs font-bold">Super Admin</span>
-                <span className="text-[10px] text-white/40">Everything unlocked</span>
-              </button>
-            </div>
-
             <Field icon={<User size={15} />} placeholder="Full name" value={name} onChange={setName} type="text" autoComplete="name" />
             <Field icon={<Mail size={15} />} placeholder="Email" value={email} onChange={setEmail} type="email" autoComplete="email" />
-            <Field icon={<Lock size={15} />} placeholder="Password (min 6 characters)" value={password} onChange={setPassword} type="password" autoComplete="new-password" />
-
-            {role === "admin" && (
-              <p className="text-[11px] text-[#f7ca45]/80 flex items-start gap-1.5">
-                <ShieldCheck size={13} className="mt-0.5 flex-shrink-0" />
-                Super Admin unlocks all premium features (word-by-word, memorization, analytics, audio repeat) for free.
-              </p>
-            )}
+            <Field icon={<Lock size={15} />} placeholder="Password (min 8 characters)" value={password} onChange={setPassword} type="password" autoComplete="new-password" />
 
             {error && <p className="text-red-400 text-xs">{error}</p>}
 

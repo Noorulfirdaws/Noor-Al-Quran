@@ -12,12 +12,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    const res = login({ email, password });
-    if (!res.ok) { setError(res.error); return; }
+    setError(""); setBusy(true);
+    const res = await login({ email, password });
+    if (!res.ok) { setError(res.error); setBusy(false); return; }
     router.push("/quran");
   };
 
@@ -46,10 +47,14 @@ export default function LoginPage() {
 
             {error && <p className="text-red-400 text-xs">{error}</p>}
 
-            <button type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-[#57d996] hover:bg-[#6ff2a8] text-black font-black py-3 rounded-full text-sm transition-all active:scale-[0.98]">
-              Log in <ArrowRight size={15} />
+            <button type="submit" disabled={busy}
+              className="w-full flex items-center justify-center gap-2 bg-[#57d996] hover:bg-[#6ff2a8] text-black font-black py-3 rounded-full text-sm transition-all active:scale-[0.98] disabled:opacity-60">
+              {busy ? "Logging in…" : <>Log in <ArrowRight size={15} /></>}
             </button>
+
+            <div className="text-center">
+              <Link href="/forgot-password" className="text-white/40 hover:text-white text-xs">Forgot your password?</Link>
+            </div>
           </form>
 
           <p className="text-center text-white/40 text-sm mt-5">

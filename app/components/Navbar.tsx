@@ -122,7 +122,7 @@ export default function Navbar() {
                 <>
                   <span className="flex items-center gap-1.5 text-xs text-white/60">
                     {isAdmin ? <ShieldCheck size={14} className="text-[#f7ca45]" /> : <BookOpen size={14} className="text-[#57d996]" />}
-                    <span className="font-semibold text-white/80 max-w-[120px] truncate">{user?.name.split(" ")[0]}</span>
+                    <span className="font-semibold text-white/80 max-w-[120px] truncate">{user?.name?.split(" ")[0] ?? user?.email?.split("@")[0]}</span>
                     {isAdmin && <span className="text-[9px] font-black uppercase tracking-wider text-[#f7ca45] bg-[#f7ca45]/10 px-1.5 py-0.5 rounded-full">Admin</span>}
                   </span>
                   <Link

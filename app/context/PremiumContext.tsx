@@ -1,7 +1,8 @@
 "use client";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import type { PremiumFeature } from "../types/quran";
 import { getActivePromo, promoDaysLeft } from "../services/promoService";
+import { useAuth } from "./AuthContext";
 
 const BYPASS_KEY = "noor_admin_premium";
 const FAMILY_KEY = "noor_family_plan"; // set when a Family plan is active
@@ -35,34 +36,42 @@ const PremiumContext = createContext<PremiumCtx>({
   refreshPremium: () => {},
 });
 
+const RANK: Record<Plan, number> = { free: 0, premium: 1, family: 2 };
+const HIGHER = (a: Plan, b: Plan): Plan => (RANK[a] >= RANK[b] ? a : b);
+
 export function PremiumProvider({ children }: { children: ReactNode }) {
+  // The real, server-truth plan from the logged-in account.
+  const { plan: authPlan } = useAuth();
   const [isPremium, setIsPremium] = useState(false);
   const [plan, setPlan] = useState<Plan>("free");
   const [promoLabel, setPromoLabel] = useState<string | null>(null);
   const [daysLeft, setDaysLeft] = useState(0);
 
-  const check = () => {
+  const check = useCallback(() => {
     try {
+      // Effective plan = the highest of: the account's server plan, an admin/
+      // family localStorage flag (dev/demo), or an active promo code.
       const admin = localStorage.getItem(BYPASS_KEY) === "1";
       const family = localStorage.getItem(FAMILY_KEY) === "1";
       const promo = getActivePromo();
-      const p: Plan = admin || family ? "family" : promo ? "premium" : "free";
+      const localPlan: Plan = admin || family ? "family" : promo ? "premium" : "free";
+      const p: Plan = HIGHER(authPlan, localPlan);
       setPlan(p);
       setIsPremium(p !== "free");
       setPromoLabel(promo ? promo.label : null);
       setDaysLeft(promo ? promoDaysLeft() : 0);
     } catch {
-      setPlan("free");
-      setIsPremium(false);
+      setPlan(authPlan);
+      setIsPremium(authPlan !== "free");
       setPromoLabel(null);
       setDaysLeft(0);
     }
-  };
+  }, [authPlan]);
 
   useEffect(() => {
     check();
-    // Re-check on focus, hourly (promo expiry), and whenever auth changes premium
-    // status (login / logout / session restore) — so admins never see an upsell.
+    // Re-check on focus, hourly (promo expiry), and whenever auth changes plan
+    // (login / logout / session restore).
     window.addEventListener("focus", check);
     window.addEventListener("noor-premium-changed", check);
     const id = setInterval(check, 60 * 60 * 1000);
@@ -71,7 +80,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("noor-premium-changed", check);
       clearInterval(id);
     };
-  }, []);
+  }, [check]);
 
   /**
    * Surah 1 (Al-Fatiha) is always fully free.
