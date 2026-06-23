@@ -38,10 +38,17 @@ function stripHash() {
 export default function ScrollToTop() {
   const pathname = usePathname();
   const isFirst = useRef(true);
+  // True when the last navigation was a browser back/forward (popstate). On those
+  // we must NOT force the top — let the browser restore the previous scroll
+  // position, otherwise returning (e.g. from a book back to the Library) jumps.
+  const poppedRef = useRef(false);
 
-  // Browser must not try to restore scroll on its own.
+  // Keep the browser's native scroll restoration (auto) so back/forward returns
+  // to where the user was. We only override the narrow hash cases below.
   useEffect(() => {
-    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    const onPop = () => { poppedRef.current = true; };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   // 1. Intercept in-page anchor clicks (`#id` or `/#id` to the current page).
@@ -76,6 +83,8 @@ export default function ScrollToTop() {
 
   // 2 + 3. On every route entry decide where to land.
   useEffect(() => {
+    const popped = poppedRef.current;
+    poppedRef.current = false;
     const hash = window.location.hash;
 
     if (hash) {
@@ -98,13 +107,15 @@ export default function ScrollToTop() {
     }
 
     isFirst.current = false;
-    scrollTopInstant();
+    // Back/forward navigations restore their own scroll position — don't fight
+    // it. Only forward navigations to a new route land at the top.
+    if (!popped) scrollTopInstant();
   }, [pathname]);
 
-  // Back/forward from bfcache → start at top too.
+  // Back/forward from bfcache → just clear any lingering hash (keep position).
   useEffect(() => {
     const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) { stripHash(); scrollTopInstant(); }
+      if (e.persisted) stripHash();
     };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
