@@ -1,54 +1,38 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-/** Instantly jump to the top, with smooth-scroll temporarily disabled. */
+/** Instantly jump to the top (no animation). Global smooth-scroll is disabled,
+ * so this never produces the "bouncing" we had before. */
 function scrollTopInstant() {
-  const html = document.documentElement;
-  const prev = html.style.scrollBehavior;
-  html.style.scrollBehavior = "auto";
   window.scrollTo(0, 0);
-  requestAnimationFrame(() => { html.style.scrollBehavior = prev; });
 }
 
 /** Remove the #hash from the address bar WITHOUT adding a history entry. */
 function stripHash() {
   if (!window.location.hash) return;
-  history.replaceState(
-    history.state,
-    "",
-    window.location.pathname + window.location.search
-  );
+  history.replaceState(history.state, "", window.location.pathname + window.location.search);
 }
 
 /**
  * Scroll behaviour controller.
  *
- * The bug this solves: in-page anchor links like `/#features` leave `#features`
- * stuck in the URL. Later, when the user returns to the home page, the browser
- * jumps straight to that section (e.g. the phone-mockup "features" block)
- * instead of starting at the top.
+ * Goal: every page — especially the home page — opens at the TOP. Returning to
+ * the home page must show the hero, never a mid-page section like "Features".
  *
- * Strategy — a section hash must NEVER persist in the URL:
- *   1. In-page anchor click → smooth-scroll to the section, then strip the hash.
- *   2. A real deep-link (page opened/navigated with a hash) → honour it once,
- *      then strip the hash so a future return starts at the top.
- *   3. Any other route entry → land at the top.
+ *   1. Browser scroll restoration is disabled (manual) so it never silently
+ *      restores a previous mid-page position on back/forward or reload.
+ *   2. In-page anchor click (`/#features`) → smooth-scroll to the section, then
+ *      strip the hash so it can never linger and re-trigger later.
+ *   3. A real deep-link opened WITH a hash → honour it once, then strip it.
+ *   4. Any other route entry → land at the top (instant).
  */
 export default function ScrollToTop() {
   const pathname = usePathname();
-  const isFirst = useRef(true);
-  // True when the last navigation was a browser back/forward (popstate). On those
-  // we must NOT force the top — let the browser restore the previous scroll
-  // position, otherwise returning (e.g. from a book back to the Library) jumps.
-  const poppedRef = useRef(false);
 
-  // Keep the browser's native scroll restoration (auto) so back/forward returns
-  // to where the user was. We only override the narrow hash cases below.
+  // The browser must not restore scroll on its own — we always control it.
   useEffect(() => {
-    const onPop = () => { poppedRef.current = true; };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   }, []);
 
   // 1. Intercept in-page anchor clicks (`#id` or `/#id` to the current page).
@@ -81,17 +65,14 @@ export default function ScrollToTop() {
     return () => document.removeEventListener("click", onClick);
   }, [pathname]);
 
-  // 2 + 3. On every route entry decide where to land.
+  // 2 + 3 + 4. On every route entry decide where to land — default is the top.
   useEffect(() => {
-    const popped = poppedRef.current;
-    poppedRef.current = false;
     const hash = window.location.hash;
 
     if (hash) {
       const el = document.getElementById(hash.slice(1));
       if (el) {
-        // Honour the deep-link once (content may need a beat to render), then
-        // strip the hash so returning here later starts at the top.
+        // Honour a forward deep-link (e.g. clicking "Features") once, then strip.
         const go = () => {
           const target = document.getElementById(hash.slice(1));
           if (target) target.scrollIntoView({ block: "start" });
@@ -99,24 +80,20 @@ export default function ScrollToTop() {
         };
         requestAnimationFrame(go);
         const t = setTimeout(go, 120);
-        isFirst.current = false;
         return () => clearTimeout(t);
       }
-      // Hash points at nothing here — clear it and fall through to top.
-      stripHash();
+      stripHash(); // hash points at nothing here — clear it
     }
 
-    isFirst.current = false;
-    // Back/forward navigations restore their own scroll position — don't fight
-    // it. Only forward navigations to a new route land at the top.
-    if (!popped) scrollTopInstant();
+    // Always land at the top. Instant + repeated across two frames so it wins
+    // even if the browser tries a late restore.
+    scrollTopInstant();
+    requestAnimationFrame(scrollTopInstant);
   }, [pathname]);
 
-  // Back/forward from bfcache → just clear any lingering hash (keep position).
+  // Reload / bfcache restore → also start at the top, hash stripped.
   useEffect(() => {
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) stripHash();
-    };
+    const onPageShow = () => { stripHash(); scrollTopInstant(); };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
