@@ -1,6 +1,10 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
+
+// Run BEFORE the browser paints on the client (kills the scroll-restore flash),
+// but fall back to useEffect during SSR to avoid the React warning.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /** Instantly jump to the top (no animation). Global smooth-scroll is disabled,
  * so this never produces the "bouncing" we had before. */
@@ -66,7 +70,8 @@ export default function ScrollToTop() {
   }, [pathname]);
 
   // 2 + 3 + 4. On every route entry decide where to land — default is the top.
-  useEffect(() => {
+  // BEFORE PAINT so a restored mid-page position never flashes on screen.
+  useIsoLayoutEffect(() => {
     const hash = window.location.hash;
 
     if (hash) {
@@ -85,8 +90,8 @@ export default function ScrollToTop() {
       stripHash(); // hash points at nothing here — clear it
     }
 
-    // Always land at the top. Instant + repeated across two frames so it wins
-    // even if the browser tries a late restore.
+    // Land at the top before paint, then again next frame in case the router
+    // restores a position right after — so there's no visible jump/flash.
     scrollTopInstant();
     requestAnimationFrame(scrollTopInstant);
   }, [pathname]);
