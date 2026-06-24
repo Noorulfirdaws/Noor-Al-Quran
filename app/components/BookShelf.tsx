@@ -1,12 +1,16 @@
 "use client";
 import { useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowRight, Download } from "lucide-react";
-import { products } from "../data/products";
+import { ChevronLeft, ChevronRight, ArrowRight, Download, Lock } from "lucide-react";
+import { products, productTier } from "../data/products";
 import BookCover from "./BookCover";
 
 export default function BookShelf() {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Free (basic) items first, then Premium — matches the Library page.
+  const tierOrder: Record<string, number> = { basic: 0, premium: 1, family: 2 };
+  const shelf = products.slice().sort((a, b) => tierOrder[productTier(a)] - tierOrder[productTier(b)]);
 
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({ left: dir === "right" ? 420 : -420, behavior: "smooth" });
@@ -26,7 +30,7 @@ export default function BookShelf() {
           </Link>
         </div>
         <p className="text-white/40 text-sm max-w-xl mb-8">
-          Beautifully designed Islamic books and worship trackers — free to download, print, and use every day.
+          Beautifully designed worship trackers, free to download and print — plus the Premium Islamic Legacy books.
         </p>
 
         {/* Shelf */}
@@ -36,28 +40,38 @@ export default function BookShelf() {
             className="flex gap-8 overflow-x-auto pb-6 pt-2 scrollbar-hide snap-x snap-mandatory"
             style={{ scrollbarWidth: "none" }}
           >
-            {products.map((p) => (
+            {shelf.map((p) => {
+              const premium = productTier(p) !== "basic";
+              return (
               <Link
                 key={p.id}
                 href={`/library/${p.slug}`}
                 className="snap-start flex-shrink-0 group flex flex-col items-center gap-3"
               >
-                <BookCover
-                  title={p.title}
-                  arabicTitle={p.arabicTitle}
-                  subtitle={p.subtitle}
-                  gradient={p.gradient}
-                  accent={p.accent}
-                  pattern={p.pattern}
-                />
+                <div className="relative">
+                  <BookCover
+                    title={p.title}
+                    arabicTitle={p.arabicTitle}
+                    subtitle={p.subtitle}
+                    gradient={p.gradient}
+                    accent={p.accent}
+                    pattern={p.pattern}
+                  />
+                  {premium && (
+                    <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#f7ca45] text-black shadow-lg">
+                      <Lock size={9} /> Premium
+                    </span>
+                  )}
+                </div>
                 <div className="text-center w-40">
                   <p className="text-white text-xs font-bold leading-snug line-clamp-2 group-hover:text-[#57d996] transition-colors">{p.title}</p>
                   <p className="text-white/30 text-[10px] mt-0.5 inline-flex items-center gap-1">
-                    <Download size={9} /> {p.price} · {p.type}
+                    {premium ? <><Lock size={9} /> Premium</> : <><Download size={9} /> Free</>} · {p.type}
                   </p>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
 
           {/* Wooden shelf edge */}
