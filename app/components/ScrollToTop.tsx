@@ -90,19 +90,31 @@ export default function ScrollToTop() {
       stripHash(); // hash points at nothing here — clear it
     }
 
-    // Hold the top for a short window. Next's App Router restores the previous
-    // scroll position a frame or two AFTER this runs; pinning scroll to 0 every
-    // frame for ~280ms overrides that single restore, so the old position never
-    // paints (no "flash of the Features section" when returning home).
+    // Pin the top until the user actually scrolls. Next's App Router restores
+    // the previous scroll position AFTER this runs — and on heavier pages (Blog,
+    // the reader) that restore can land hundreds of ms later, past any fixed
+    // window. So we keep forcing scroll to 0 every frame (up to 1s) and release
+    // THE INSTANT a real scroll gesture happens — overriding every late restore
+    // without ever blocking the user.
     let raf = 0;
+    let released = false;
     const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
     const start = now();
+    const gestures = ["wheel", "touchstart", "keydown", "pointerdown", "mousedown"];
+    const release = () => { released = true; };
+    gestures.forEach((g) => window.addEventListener(g, release, { passive: true, once: true }));
+    const cleanup = () => {
+      cancelAnimationFrame(raf);
+      gestures.forEach((g) => window.removeEventListener(g, release));
+    };
     const lock = () => {
+      if (released) { cleanup(); return; }
       window.scrollTo(0, 0);
-      if (now() - start < 280) raf = requestAnimationFrame(lock);
+      if (now() - start < 1000) raf = requestAnimationFrame(lock);
+      else cleanup();
     };
     lock();
-    return () => cancelAnimationFrame(raf);
+    return cleanup;
   }, [pathname]);
 
   // Reload / bfcache restore → also start at the top, hash stripped.
