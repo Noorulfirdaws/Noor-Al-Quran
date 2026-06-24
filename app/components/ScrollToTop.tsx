@@ -90,10 +90,19 @@ export default function ScrollToTop() {
       stripHash(); // hash points at nothing here — clear it
     }
 
-    // Land at the top before paint, then again next frame in case the router
-    // restores a position right after — so there's no visible jump/flash.
-    scrollTopInstant();
-    requestAnimationFrame(scrollTopInstant);
+    // Hold the top for a short window. Next's App Router restores the previous
+    // scroll position a frame or two AFTER this runs; pinning scroll to 0 every
+    // frame for ~280ms overrides that single restore, so the old position never
+    // paints (no "flash of the Features section" when returning home).
+    let raf = 0;
+    const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+    const start = now();
+    const lock = () => {
+      window.scrollTo(0, 0);
+      if (now() - start < 280) raf = requestAnimationFrame(lock);
+    };
+    lock();
+    return () => cancelAnimationFrame(raf);
   }, [pathname]);
 
   // Reload / bfcache restore → also start at the top, hash stripped.
