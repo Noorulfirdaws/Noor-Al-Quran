@@ -12,9 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* NOTE: no global `scroll-behavior: smooth` — it animates the browser's scroll
+   restoration on back/forward navigation, which made pages (e.g. the Library)
+   appear to "jump" when returning from a sub-page. Intentional smooth scrolls
+   (anchor links, audio-follow) set behavior: "smooth" explicitly, so they still
+   animate; everything else (navigation, restoration) is now instant. */
 
 body {
   background: var(--background);
