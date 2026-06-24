@@ -21,8 +21,9 @@ export default function LibraryPage() {
           <p className="text-[#57d996] text-[10px] font-bold tracking-widest uppercase mb-1">Digital Library</p>
           <h1 className="text-3xl sm:text-4xl font-black leading-tight">The Book Shelf</h1>
           <p className="text-white/50 text-base mt-3 max-w-2xl leading-relaxed">
-            Beautifully designed Islamic books and worship trackers. The Islamic Legacy books are free to
-            download and print; the worship-tracker programs are part of Premium. Embed any item on your site too.
+            Beautifully designed Islamic books and worship trackers. The worship trackers — wudu, prayer
+            checklists and logs — are free to download and print; the Islamic Legacy books are part of Premium.
+            Embed any item on your site too.
           </p>
         </div>
       </div>

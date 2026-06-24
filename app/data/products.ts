@@ -43,10 +43,10 @@ export interface DigitalProduct {
   tier?: "basic" | "premium" | "family";  // access tier (defaults via productTier)
 }
 
-/** Access tier for a product. Islamic Legacy books are free (basic); worship
- * trackers/programs are Premium; explicit `tier` on a product wins. */
+/** Access tier for a product. The Islamic Legacy books are Premium; the worship
+ * trackers (wudu, checklists, logs) are free (basic); explicit `tier` wins. */
 export function productTier(p: DigitalProduct): "basic" | "premium" | "family" {
-  return p.tier ?? (p.category === "Worship Trackers" ? "premium" : "basic");
+  return p.tier ?? (p.category === "Islamic Legacy" ? "premium" : "basic");
 }
 
 const PRAYERS = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
