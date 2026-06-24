@@ -9,7 +9,11 @@ import { Download, Code2, Lock } from "lucide-react";
 
 export default function LibraryPage() {
   const [cat, setCat] = useState<string>("All");
-  const filtered = cat === "All" ? products : products.filter((p) => p.category === cat);
+  // Free (basic) items first, then Premium, then Family — stable within each tier.
+  const tierOrder: Record<string, number> = { basic: 0, premium: 1, family: 2 };
+  const filtered = (cat === "All" ? products : products.filter((p) => p.category === cat))
+    .slice()
+    .sort((a, b) => tierOrder[productTier(a)] - tierOrder[productTier(b)]);
 
   return (
     <div className="min-h-screen bg-[#050907] text-white flex flex-col">
