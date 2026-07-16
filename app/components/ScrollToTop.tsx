@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 // Run BEFORE the browser paints on the client (kills the scroll-restore flash),
@@ -33,6 +33,10 @@ function stripHash() {
  */
 export default function ScrollToTop() {
   const pathname = usePathname();
+  // True when the user has *asked* to scroll (clicked an in-page anchor, or
+  // opened a real #hash deep-link). While true, the top-pin guard stands down so
+  // it never snaps a legitimate "scroll to Pricing/Features" back to the hero.
+  const intentionalScroll = useRef(false);
 
   // The browser must not restore scroll on its own — we always control it.
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function ScrollToTop() {
       if (!el) return;                       // target not on this page — let it navigate
 
       e.preventDefault();
+      intentionalScroll.current = true;      // user asked to scroll — guard stands down
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       stripHash();                           // never let the hash linger
     };
@@ -72,11 +77,15 @@ export default function ScrollToTop() {
   // 2 + 3 + 4. On every route entry decide where to land — default is the top.
   // BEFORE PAINT so a restored mid-page position never flashes on screen.
   useIsoLayoutEffect(() => {
+    // Fresh route entry: default intent is "land at the top", until a hash or an
+    // anchor click says otherwise.
+    intentionalScroll.current = false;
     const hash = window.location.hash;
 
     if (hash) {
       const el = document.getElementById(hash.slice(1));
       if (el) {
+        intentionalScroll.current = true;    // a real deep-link IS an intentional scroll
         // Honour a forward deep-link (e.g. clicking "Features") once, then strip.
         const go = () => {
           const target = document.getElementById(hash.slice(1));
@@ -90,30 +99,31 @@ export default function ScrollToTop() {
       stripHash(); // hash points at nothing here — clear it
     }
 
-    // Pin the top until the user actually scrolls. Next's App Router restores
-    // the previous scroll position AFTER this runs — and on heavier pages (Blog,
-    // the reader) that restore can land hundreds of ms later, past any fixed
-    // window. So we keep forcing scroll to 0 every frame (up to 1s) and release
-    // THE INSTANT a real scroll gesture happens — overriding every late restore
-    // without ever blocking the user.
-    let raf = 0;
+    // Land at the top and KEEP it there until the user actually scrolls.
+    // Next's App Router restores the previous scroll position via a scroll event
+    // that can land well after this effect runs — that's what was dropping the
+    // home page onto the "AI teacher" (#features) section when returning from
+    // demo/pricing. We watch for any scroll the user didn't initiate and snap it
+    // back to the top, releasing the instant a real scroll gesture happens.
+    window.scrollTo(0, 0);
     let released = false;
-    const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
-    const start = now();
-    const gestures = ["wheel", "touchstart", "keydown", "pointerdown", "mousedown"];
-    const release = () => { released = true; };
-    gestures.forEach((g) => window.addEventListener(g, release, { passive: true, once: true }));
-    const cleanup = () => {
-      cancelAnimationFrame(raf);
+    // Real scroll-intent only — NOT pointer/mouse-down, which also fire from the
+    // very click that navigated back here and would release the guard too early.
+    const gestures = ["wheel", "touchmove", "keydown"];
+    function cleanup() {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
       gestures.forEach((g) => window.removeEventListener(g, release));
+    }
+    const release = () => { released = true; cleanup(); };
+    const onScroll = () => {
+      if (released || intentionalScroll.current) return;   // user-driven scroll — leave it
+      if (window.scrollY !== 0) window.scrollTo(0, 0);      // Next's late restore — snap back
     };
-    const lock = () => {
-      if (released) { cleanup(); return; }
-      window.scrollTo(0, 0);
-      if (now() - start < 1000) raf = requestAnimationFrame(lock);
-      else cleanup();
-    };
-    lock();
+    // Guard through the whole restore window, not a fixed 1s the late restore can outlast.
+    const timer = setTimeout(cleanup, 2500);
+    gestures.forEach((g) => window.addEventListener(g, release, { passive: true, once: true }));
+    window.addEventListener("scroll", onScroll, { passive: true });
     return cleanup;
   }, [pathname]);
 
