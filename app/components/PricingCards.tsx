@@ -9,6 +9,7 @@ export default function PricingCards() {
   const [isAnnual, setIsAnnual] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<null | {
     id: string; name: string; price: number; priceLabel: string; features: string[];
+    interval: "monthly" | "annual";
   }>(null);
 
   return (
@@ -116,6 +117,7 @@ export default function PricingCards() {
                           price,
                           priceLabel: priceLabel ?? "",
                           features: plan.features,
+                          interval: isAnnual ? "annual" : "monthly",
                         })
                       }
                       className={`w-full py-3.5 rounded-full font-bold text-sm transition-all duration-150 active:scale-95 focus-visible:ring-2 focus-visible:ring-[#57d996] focus-visible:outline-none ${
