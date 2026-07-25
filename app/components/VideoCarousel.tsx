@@ -2,51 +2,52 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 
+// Curated real YouTube talks on hifz — each id verified embeddable (oEmbed).
 const podcastEpisodes = [
   {
     id: 1,
     date: "01.10.2025",
-    title: "The REAL Reason You Struggle With The Quran | Qari Yahya Ali | re:Verses Episode 52 Part 2",
+    title: "Make Your Hifz 100× Better by Doing This — ArabicFluency",
     label: "BEYOND\nMEMORIZATION",
     // Man reading Arabic book — Unsplash free
     photo: "https://images.unsplash.com/photo-1573483883644-d0b4b55eb25d?w=640&q=80&fit=crop",
-    youtubeId: "rAKLiE3opKU",
+    youtubeId: "0qLrFXVHLMg",
   },
   {
     id: 2,
     date: "21.09.2025",
-    title: "I Wanted to Quit the Quran... Then Allah Showed Me This | Qari Yahya Ali | re:Verses Episode 52 Part 1",
+    title: "How to Stay Motivated to Memorize the Quran — SFM Academy",
     label: "NEVER\nGIVE UP",
     // Intricate Arabic calligraphy mosque dome — Unsplash free
     photo: "https://images.unsplash.com/photo-1761639935382-43452f278898?w=640&q=80&fit=crop",
-    youtubeId: "rAKLiE3opKU",
+    youtubeId: "NnzkE6NvaG8",
   },
   {
     id: 3,
     date: "25.07.2025",
-    title: "Quran Revision Burnout? Try This 20-Minute Protocol | Qari Younus Rahman | re:Verses Episode 51",
+    title: "Struggling to Memorize the Quran? Try These 5 Proven Methods — Journey To Hifth",
     label: "1 JUZ IN\n20\nMINUTES?!",
     // Person at desk studying under lamp at night — Unsplash free
     photo: "https://images.unsplash.com/photo-1639300505533-9921527d6a50?w=640&q=80&fit=crop",
-    youtubeId: "rAKLiE3opKU",
+    youtubeId: "pqQ26hadWY0",
   },
   {
     id: 4,
     date: "15.06.2025",
-    title: "The Science of Memorization: What Brain Research Tells Us About Hifz | re:Verses Episode 50",
+    title: "The Science Behind Memorizing Qur'an: Benefits You Never Knew — The Islamic Squad",
     label: "SCIENCE\nOF\nHIFZ",
     // Iridescent glowing brain science render — Unsplash free
     photo: "https://images.unsplash.com/photo-1617791160536-598cf32026fb?w=640&q=80&fit=crop",
-    youtubeId: "rAKLiE3opKU",
+    youtubeId: "6p5V7bqzL0Y",
   },
   {
     id: 5,
     date: "03.05.2025",
-    title: "From Zero to Hafiz at 40: One Man's Journey | re:Verses Episode 49",
+    title: "How Can I Train My Brain to Memorise Quran? — Ustadh Abujabir Penabdul",
     label: "HAFIZ\nAT 40",
     // Man reading in library — Unsplash free
     photo: "https://images.unsplash.com/photo-1573142143200-2a6d95ae7352?w=640&q=80&fit=crop",
-    youtubeId: "rAKLiE3opKU",
+    youtubeId: "M9Bsl7VyOfE",
   },
 ];
 
@@ -65,8 +66,8 @@ export default function VideoCarousel() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl font-black text-[#050505]">re:Verses podcast</h2>
-            <a href="#" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">View All</a>
+            <h2 className="text-xl font-black text-[#050505]">Hifz talks worth watching</h2>
+            <a href="https://www.youtube.com/results?search_query=quran+hifz+memorization+motivation" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">More on YouTube →</a>
           </div>
           <div className="h-px bg-gray-200 mb-8" />
 
@@ -111,9 +112,8 @@ export default function VideoCarousel() {
                   </div>
                 </div>
 
-                {/* Date + title */}
-                <p className="text-xs text-gray-400 mb-1.5">{ep.date}</p>
-                <h3 className="text-sm font-semibold text-[#050505] leading-snug line-clamp-2 group-hover:text-[#57d996] transition-colors">
+                {/* Title */}
+                <h3 className="text-sm font-semibold text-[#050505] leading-snug line-clamp-2 group-hover:text-[#57d996] transition-colors mt-0.5">
                   {ep.title}
                 </h3>
               </button>
