@@ -1,13 +1,20 @@
 {
-  "name": "Noor-ul-Quran",
-  "short_name": "Noor-ul-Quran",
-  "description": "AI-powered Quran memorization",
+  "id": "/",
+  "name": "Noor-ul-Quran — AI Quran Memorization",
+  "short_name": "Noor Quran",
+  "description": "AI-powered Quran memorization with real-time recitation feedback, mistake detection, and personalized hifz planning.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#050907",
   "theme_color": "#57d996",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "lifestyle", "books"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

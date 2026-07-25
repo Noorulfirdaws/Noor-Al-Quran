@@ -6,7 +6,7 @@
     "dev": "next dev -p 3100",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
-    "start": "next start -p 3100",
+    "start": "next start",
     "lint": "eslint",
     "test": "jest --no-coverage",
     "test:watch": "jest --watch"
