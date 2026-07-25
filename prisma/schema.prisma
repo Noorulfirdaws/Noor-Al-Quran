@@ -49,6 +49,21 @@ model User {
   ownedFamily  Family?       @relation("FamilyOwner")
   giftsRedeemed GiftCard[]   @relation("RedeemedBy")
   resetTokens  PasswordResetToken[]
+  recitationUsage RecitationUsage[]
+}
+
+// Server-side monthly AI-scoring counter — the authoritative quota (the client
+// localStorage counter is only optimistic UX and is trivially reset). One row
+// per user per calendar month; enforced in app/api/recite/score.
+model RecitationUsage {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month  String // "YYYY-MM"
+  count  Int    @default(0)
+
+  @@unique([userId, month])
+  @@index([userId])
 }
 
 model PasswordResetToken {

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { X, Check, Crown, Users, BookOpen, Sparkles } from "lucide-react";
 import type { ContentTier } from "../context/PremiumContext";
+import { pricingPlans } from "../data/siteData";
 
 // Professional upgrade modal shown when a user hits content above their plan.
 // Pure UI — the actual plan activation is client-side (demo); a real build would
@@ -12,6 +13,10 @@ interface Props {
   contentLabel?: string;           // e.g. "the Premium Library"
   onClose: () => void;
 }
+
+// Prices come from the single source of truth (siteData.pricingPlans) so the
+// modal can never drift from the pricing section.
+const monthly = (id: string) => pricingPlans.find((p) => p.id === id)?.monthlyPrice ?? 0;
 
 const PLANS = [
   {
@@ -25,7 +30,7 @@ const PLANS = [
   {
     id: "premium",
     name: "Premium",
-    price: "$9",
+    price: `$${monthly("premium")}`,
     period: "/mo",
     icon: <Crown size={18} className="text-[#f7ca45]" />,
     accent: "border-[#f7ca45]/40 bg-[#f7ca45]/[0.04]",
@@ -35,11 +40,11 @@ const PLANS = [
   {
     id: "family",
     name: "Family",
-    price: "$19",
+    price: `$${monthly("family")}`,
     period: "/mo",
     icon: <Users size={18} className="text-[#57d996]" />,
     accent: "border-[#57d996]/40 bg-[#57d996]/[0.04]",
-    features: ["Everything in Premium", "Up to 6 family accounts", "Parent dashboard", "Shared family progress", "Family resources"],
+    features: ["Everything in Premium", "Up to 5 family accounts", "Parent dashboard", "Shared family progress", "Family resources"],
   },
 ];
 

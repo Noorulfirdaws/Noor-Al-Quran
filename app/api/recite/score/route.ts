@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "../../../server/auth";
+import { getServerPlan } from "../../../server/subscription";
+import { consumeQuota, refundQuota } from "../../../server/usage";
 
 /**
  * POST /api/recite/score
@@ -52,6 +55,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ── Auth: hosted AI scoring requires a logged-in account (the free on-device
+  //    Whisper path stays open to everyone). This is what stops anonymous,
+  //    unlimited, direct-to-API abuse of the paid pipeline. ──
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json(
+      { error: "Sign in to use AI recitation scoring.", authRequired: true },
+      { status: 401 }
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -72,6 +86,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Audio too large (max 25 MB)." }, { status: 413 });
   }
 
+  // ── Server-enforced monthly quota (free 5 / premium 50). The authoritative
+  //    limit — the client localStorage counter is only optimistic UX. Reserve a
+  //    unit now; it is refunded below if OUR scoring service fails. ──
+  const plan = await getServerPlan(session.userId);
+  const quota = await consumeQuota(session.userId, plan);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: "You've reached your monthly AI scoring limit.",
+        limit: quota.limit,
+        used: quota.used,
+        plan,
+        upgrade: plan === "free",
+      },
+      { status: 429 }
+    );
+  }
+
   // ── Path A: self-hosted shared scoring service (flat cost) — wins if set ──
   if (serviceUrl) {
     try {
@@ -86,6 +118,7 @@ export async function POST(req: NextRequest) {
         body: fwd,
       });
       if (!sRes.ok) {
+        await refundQuota(session.userId);
         const detail = await sRes.text().catch(() => "");
         return NextResponse.json({ error: "Scoring service error.", detail: detail.slice(0, 300) }, { status: 502 });
       }
@@ -108,6 +141,7 @@ export async function POST(req: NextRequest) {
         { status: 200 }
       );
     } catch (err) {
+      await refundQuota(session.userId);
       return NextResponse.json(
         { error: "Could not reach scoring service.", detail: err instanceof Error ? err.message : "unknown" },
         { status: 502 }
@@ -131,6 +165,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!wRes.ok) {
+      await refundQuota(session.userId);
       const detail = await wRes.text().catch(() => "");
       return NextResponse.json({ error: "Transcription failed.", detail: detail.slice(0, 300) }, { status: 502 });
     }
@@ -179,6 +214,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ configured: true, transcript, feedback, tajweedNotes }, { status: 200 });
   } catch (err) {
+    await refundQuota(session.userId);
     return NextResponse.json(
       { error: "Scoring failed.", detail: err instanceof Error ? err.message : "unknown" },
       { status: 500 }
