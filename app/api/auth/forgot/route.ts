@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { db } from "../../../server/db";
 import { sendPasswordResetEmail } from "../../../server/email";
+import { rateLimit, clientIp, tooMany } from "../../../server/ratelimit";
 
 export const runtime = "nodejs";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function POST(req: NextRequest) {
+  // Throttle reset requests per IP so an attacker can't spam a victim's inbox.
+  const rl = rateLimit(`forgot:${clientIp(req)}`, 4, 15 * 60_000); // 4 / 15 min
+  if (!rl.ok) return tooMany(rl.retryAfter);
+
   let body: { email?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
   const email = (body.email ?? "").trim().toLowerCase();

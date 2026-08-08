@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../server/db";
 import { hashPassword, setSessionCookie } from "../../../server/auth";
+import { rateLimit, clientIp, tooMany } from "../../../server/ratelimit";
 
 export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function POST(req: NextRequest) {
+  // Throttle mass/automated account creation per IP.
+  const rl = rateLimit(`signup:${clientIp(req)}`, 5, 60 * 60_000); // 5 / hour
+  if (!rl.ok) return tooMany(rl.retryAfter);
+
   let body: { name?: string; email?: string; password?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
 

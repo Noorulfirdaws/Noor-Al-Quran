@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../server/db";
 import { hashPassword, setSessionCookie } from "../../../server/auth";
+import { rateLimit, clientIp, tooMany } from "../../../server/ratelimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  // Defense-in-depth: tokens are 32 random bytes (unguessable), but cap attempts.
+  const rl = rateLimit(`reset:${clientIp(req)}`, 10, 15 * 60_000); // 10 / 15 min
+  if (!rl.ok) return tooMany(rl.retryAfter);
+
   let body: { token?: string; password?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
 
