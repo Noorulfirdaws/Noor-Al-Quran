@@ -27,6 +27,7 @@ export default function Navbar() {
     { label: "Goals", href: "/goals" },
     { label: t.navBlog, href: "/blog" },
     { label: "Library", href: "/library" },
+    { label: "Du'as", href: "/duas" },
   ];
 
   useEffect(() => {
