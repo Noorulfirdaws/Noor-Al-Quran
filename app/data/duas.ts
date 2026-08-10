@@ -8,6 +8,7 @@ export interface Dua {
   arabic: string;
   transliteration: string;
   meaning: string;
+  occasion?: string;      // for everyday du'as: the moment it is said
   source?: string;
   repeat?: string;        // e.g. "Recite 3 times"
   restored?: boolean;     // true where we completed previously-truncated Arabic
@@ -206,6 +207,29 @@ export const duaSections: DuaSection[] = [
           "O Allah, Creator of the heavens and the earth, O Protector, O Preserver — protect our people in Iraq, Palestine, Chechnya, Kashmir, Afghanistan, and everywhere they are oppressed. Guard them from every evil and harm, and grant them victory in every place. Āmīn, O Allah. Āmīn. Āmīn.",
         restored: true,
       },
+    ],
+  },
+  {
+    id: "everyday",
+    title: "Everyday Sunnah Du'as",
+    duas: [
+      { occasion: "Before eating", arabic: "بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ", transliteration: "Bismillāhi wa ʿalā barakatillāh", meaning: "In the name of Allah, and with the blessings of Allah." },
+      { occasion: "If you forget, then remember while eating", arabic: "بِسْمِ اللَّهِ أَوَّلَهُ وَآخِرَهُ", transliteration: "Bismillāhi awwalahu wa ākhirah", meaning: "In the name of Allah at its beginning and its end." },
+      { occasion: "After eating", arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِينَ", transliteration: "Alhamdu lillāhi alladhī aṭʿamanā wa saqānā wa jaʿalanā muslimīn", meaning: "All praise is for Allah, who fed us, gave us drink, and made us of the Muslims." },
+      { occasion: "Before sleeping", arabic: "اللَّهُمَّ بِاسْمِكَ أَمُوتُ وَأَحْيَا", transliteration: "Allāhumma bismika amūtu wa aḥyā", meaning: "O Allah, in Your name I die and I live." },
+      { occasion: "On waking", arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", transliteration: "Alhamdu lillāhi alladhī aḥyānā baʿda mā amātanā wa ilayhi an-nushūr", meaning: "All praise is for Allah, who gave us life after causing us to die, and to Him is the resurrection." },
+      { occasion: "Entering the bathroom", arabic: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", transliteration: "Allāhumma innī aʿūdhu bika mina al-khubuthi wal-khabā'ith", meaning: "O Allah, I seek refuge in You from all evil and impurity." },
+      { occasion: "Leaving the bathroom", arabic: "غُفْرَانَكَ", transliteration: "Ghufrānak", meaning: "I seek Your forgiveness." },
+      { occasion: "After wudu", arabic: "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", transliteration: "Ashhadu an lā ilāha illā Allāhu waḥdahu lā sharīka lah, wa ashhadu anna Muḥammadan ʿabduhu wa rasūluh", meaning: "I testify that there is no god but Allah alone, without partner, and that Muhammad is His servant and Messenger." },
+      { occasion: "Entering the masjid", arabic: "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ", transliteration: "Allāhumma-ftaḥ lī abwāba raḥmatik", meaning: "O Allah, open for me the gates of Your mercy." },
+      { occasion: "Leaving the masjid", arabic: "اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ", transliteration: "Allāhumma innī as'aluka min faḍlik", meaning: "O Allah, I ask You from Your bounty." },
+      { occasion: "Leaving home", arabic: "بِسْمِ اللَّهِ تَوَكَّلْتُ عَلَى اللَّهِ، لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "Bismillāhi tawakkaltu ʿalā Allāh, lā ḥawla wa lā quwwata illā billāh", meaning: "In the name of Allah, I place my trust in Allah; there is no might nor power except with Allah." },
+      { occasion: "Wearing new clothes", arabic: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", transliteration: "Alhamdu lillāhi alladhī kasānī hādhā wa razaqanīhi min ghayri ḥawlin minnī wa lā quwwah", meaning: "All praise is for Allah, who clothed me with this and provided it for me with no power or strength of my own." },
+      { occasion: "When it rains", arabic: "اللَّهُمَّ صَيِّبًا نَافِعًا", transliteration: "Allāhumma ṣayyiban nāfiʿā", meaning: "O Allah, make it a beneficial rainfall." },
+      { occasion: "For an increase in knowledge", arabic: "رَبِّ زِدْنِي عِلْمًا", transliteration: "Rabbi zidnī ʿilmā", meaning: "My Lord, increase me in knowledge.", source: "Qur'an — Ta-Ha 20:114" },
+      { occasion: "In hardship & distress — the du'a of Yunus ﷺ", arabic: "لَا إِلَهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ", transliteration: "Lā ilāha illā anta subḥānaka innī kuntu mina aẓ-ẓālimīn", meaning: "There is no god but You; glory be to You; indeed, I have been among the wrongdoers.", source: "Qur'an — Al-Anbiya 21:87" },
+      { occasion: "The master of seeking forgiveness — Sayyid al-Istighfār", arabic: "اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ", transliteration: "Allāhumma anta rabbī lā ilāha illā ant, khalaqtanī wa anā ʿabduk, wa anā ʿalā ʿahdika wa waʿdika mā-staṭaʿt, aʿūdhu bika min sharri mā ṣanaʿt, abū'u laka bi-niʿmatika ʿalayya, wa abū'u bi-dhanbī fa-ghfir lī fa-innahu lā yaghfiru adh-dhunūba illā ant", meaning: "O Allah, You are my Lord; there is no god but You. You created me and I am Your servant. I keep Your covenant and promise as best I can. I seek refuge in You from the evil I have done. I acknowledge Your favour upon me, and I confess my sin — so forgive me, for none forgives sins but You.", source: "Sahih al-Bukhari 6306" },
+      { occasion: "The most comprehensive du'a", arabic: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", transliteration: "Rabbanā ātinā fid-dunyā ḥasanah wa fil-ākhirati ḥasanah wa qinā ʿadhāba an-nār", meaning: "Our Lord, grant us good in this world and good in the Hereafter, and protect us from the punishment of the Fire.", source: "Qur'an — Al-Baqarah 2:201" },
     ],
   },
 ];
