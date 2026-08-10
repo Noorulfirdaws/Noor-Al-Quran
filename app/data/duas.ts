@@ -21,7 +21,7 @@ export interface DuaSection {
 }
 
 export const duaIntro =
-  "Whenever the Prophet Muhammad ﷺ was worried, he turned to prayer. Du'a is our most powerful weapon, and no crisis should deter us from it. Please keep those in dire situations in your prayers — they are, most certainly, in need of it.";
+  "Authentic supplications from the Qur'an and Sunnah — for everyday life and for times of hardship, fear, and oppression. Whenever the Prophet Muhammad ﷺ was worried, he turned to prayer; du'a is the believer's most powerful weapon in ease and difficulty alike.";
 
 export const duaSections: DuaSection[] = [
   {

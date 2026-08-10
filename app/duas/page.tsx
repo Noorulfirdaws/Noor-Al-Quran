@@ -20,11 +20,14 @@ export default function DuasPage() {
           {/* Header */}
           <div className="text-center mb-10">
             <p className="text-[#57d996] text-[11px] font-bold tracking-[0.2em] uppercase mb-2">
-              Fortress of Righteousness
+              Qur&apos;an &amp; Sunnah
             </p>
-            <h1 className="text-3xl sm:text-4xl font-black leading-tight">
-              Du&apos;as against <span className="text-[#57d996]">Injustice &amp; Oppression</span>
+            <h1 className="text-5xl sm:text-6xl font-black leading-none">
+              Du&apos;<span className="text-[#57d996]">as</span>
             </h1>
+            <p className="text-white/40 text-[11px] sm:text-xs font-bold tracking-[0.15em] uppercase mt-3">
+              Everyday life · Times of hardship · Against injustice &amp; oppression
+            </p>
             <p className="text-white/50 text-sm sm:text-base mt-4 leading-relaxed max-w-2xl mx-auto">
               {duaIntro}
             </p>
