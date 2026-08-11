@@ -5,6 +5,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import { PremiumProvider } from "./context/PremiumContext";
 import ScrollToTop from "./components/ScrollToTop";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 
 // General Arabic font
 import { Amiri } from "next/font/google";
@@ -30,11 +31,11 @@ export const metadata: Metadata = {
   keywords: ["Quran memorization", "hifz app", "AI Quran", "tajweed", "Islamic app", "Quran recitation"],
   authors: [{ name: "Noor-ul-Quran" }],
   creator: "Noor-ul-Quran",
-  metadataBase: new URL("https://noor-ul-quran.com"),
+  metadataBase: new URL("https://quran.noorulfirdaws.com"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://noor-ul-quran.com",
+    url: "https://quran.noorulfirdaws.com",
     siteName: "Noor-ul-Quran",
     title: "Noor-ul-Quran — AI Quran Memorization",
     description: "AI-powered mistake detection, personalized hifz planning, and real-time recitation feedback. Free to start.",
@@ -76,6 +77,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${amiri.variable} ${amiriQuran.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
         <ScrollToTop />
         <AuthProvider>
           <PremiumProvider>
