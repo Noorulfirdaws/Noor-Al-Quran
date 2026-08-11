@@ -17,8 +17,7 @@ export interface ReciteSession {
   xpEarned: number;
 }
 
-export interface AchievementId
-  extends String {} // typed alias for readability
+export type AchievementId = string; // typed alias for readability
 
 export const ACHIEVEMENTS: Record<string, { id: string; title: string; desc: string; icon: string; xp: number; condition: (s: GamificationState) => boolean }> = {
   first_recite:   { id: "first_recite",   title: "First Recitation",   desc: "Complete your first AI-checked recitation",    icon: "🎤", xp: 50,  condition: s => s.totalSessions >= 1 },

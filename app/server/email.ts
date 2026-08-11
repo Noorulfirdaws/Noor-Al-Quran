@@ -19,8 +19,13 @@ async function send(to: string, subject: string, html: string, devLink?: string)
 
   if (!key) {
     // Dev fallback — surface the link so the flow is testable without a provider.
-    console.log(`[email:dev] to=${to} subject=${subject}${devLink ? `\n[email:dev] link=${devLink}` : ""}`);
-    return { sent: false, devLink };
+    // In PRODUCTION we never log reset links (they'd sit in server logs); the flow
+    // simply reports it can't email until RESEND_API_KEY is set.
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[email:dev] to=${to} subject=${subject}${devLink ? `\n[email:dev] link=${devLink}` : ""}`);
+      return { sent: false, devLink };
+    }
+    return { sent: false, error: "Email provider not configured." };
   }
 
   try {
