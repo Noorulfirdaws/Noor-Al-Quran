@@ -48,14 +48,66 @@ async function fetchWithFallback<T>(proxyPath: string, directPath: string): Prom
   return res.json() as Promise<T>;
 }
 
+// ─── Données LOCALES (hors-ligne) ────────────────────────────────────────────
+// Servies depuis /public/data/quran (fichiers statiques générés une fois par
+// `node scripts/generate-quran-data.mjs`). Aucune dépendance internet pour le
+// texte arabe et la navigation. Mémorisées en mémoire le temps de la session.
+
+let _metaMemo: SurahMeta[] | null = null;
+let _uthmaniMemo: Record<string, { n: number; text: string }[]> | null = null;
+
+async function loadLocalMeta(): Promise<SurahMeta[]> {
+  if (_metaMemo) return _metaMemo;
+  const res = await fetch("/data/quran/surahs.json");
+  if (!res.ok) throw new Error("Données Coran locales introuvables");
+  _metaMemo = (await res.json()) as SurahMeta[];
+  return _metaMemo;
+}
+
+async function loadLocalArabic(surahNumber: number): Promise<{ n: number; text: string }[]> {
+  if (!_uthmaniMemo) {
+    const res = await fetch("/data/quran/uthmani.json");
+    if (!res.ok) throw new Error("Texte arabe local introuvable");
+    _uthmaniMemo = (await res.json()) as Record<string, { n: number; text: string }[]>;
+  }
+  return _uthmaniMemo[String(surahNumber)] ?? [];
+}
+
+// Type d'une édition AlQuran Cloud (utilisé pour l'enrichissement en ligne).
+type AlQuranEdition = {
+  number: number;
+  name: string;
+  englishName: string;
+  englishNameTranslation: string;
+  numberOfAyahs: number;
+  revelationType: string;
+  edition: { identifier: string };
+  ayahs: {
+    number: number;
+    numberInSurah: number;
+    text: string;
+    juz: number;
+    page: number;
+    hizbQuarter: number;
+    sajda: boolean | { id: number; recommended: boolean; obligatory: boolean };
+  }[];
+};
+
 // ─── Surah List ──────────────────────────────────────────────────────────────
 
 export async function getSurahList(): Promise<SurahMeta[]> {
   const cached = cacheGet<SurahMeta[]>(`qs:${CACHE_VERSION}:surah-list`);
   if (cached) return cached;
 
-  const json = await fetchWithFallback<{ data: SurahMeta[] }>("/surah", "/surah");
-  const list = json.data;
+  // 1) Données locales (hors-ligne, indépendantes).
+  let list: SurahMeta[] | null = null;
+  try {
+    list = await loadLocalMeta();
+  } catch {
+    // 2) Repli : proxy interne puis API distante (si données locales absentes).
+    const json = await fetchWithFallback<{ data: SurahMeta[] }>("/surah", "/surah");
+    list = json.data;
+  }
   cacheSet(`qs:${CACHE_VERSION}:surah-list`, list);
   return list;
 }
@@ -81,45 +133,61 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
   const cached = cacheGet<SurahResult>(cacheKey);
   if (cached) return cached;
 
-  type AlQuranEdition = {
-    number: number;
-    name: string;
-    englishName: string;
-    englishNameTranslation: string;
-    numberOfAyahs: number;
-    revelationType: string;
-    edition: { identifier: string };
-    ayahs: {
-      number: number;
-      numberInSurah: number;
-      text: string;
-      juz: number;
-      page: number;
-      hizbQuarter: number;
-      sajda: boolean | { id: number; recommended: boolean; obligatory: boolean };
-    }[];
-  };
+  // 1) Métadonnées + texte arabe : LOCAL d'abord (hors-ligne, indépendant).
+  const metaList = await loadLocalMeta().catch(() => [] as SurahMeta[]);
+  const localMeta = metaList.find((s) => s.number === surahNumber);
+  const localArabic = await loadLocalArabic(surahNumber).catch(() => []);
 
-  const json = await fetchWithFallback<{ data: AlQuranEdition[] }>(
-    `/surah/${surahNumber}`,
-    `/surah/${surahNumber}/editions/quran-uthmani,en.transliteration,en.sahih`
-  );
+  // 2) Translittération + traduction EN : en ligne, au mieux (optionnel).
+  let translit: { text: string }[] = [];
+  let translation: { text: string }[] = [];
+  let online: AlQuranEdition[] | null = null;
+  try {
+    const json = await fetchWithFallback<{ data: AlQuranEdition[] }>(
+      `/surah/${surahNumber}`,
+      `/surah/${surahNumber}/editions/quran-uthmani,en.transliteration,en.sahih`
+    );
+    online = json.data;
+    translit = json.data[1]?.ayahs ?? [];
+    translation = json.data[2]?.ayahs ?? [];
+  } catch {
+    // hors-ligne : on garde l'arabe local seul
+  }
 
-  const [arabic, translit, translation] = json.data;
+  const onlineArabic = online?.[0];
+  if (!localMeta && !onlineArabic) {
+    throw new Error("Sourate indisponible (hors-ligne et données locales manquantes).");
+  }
 
-  const meta: SurahMeta = {
-    number: arabic.number,
-    name: arabic.name,
-    englishName: arabic.englishName,
-    englishNameTranslation: arabic.englishNameTranslation,
-    numberOfAyahs: arabic.numberOfAyahs,
-    revelationType: arabic.revelationType as "Meccan" | "Medinan",
-  };
+  // Métadonnées : locales en priorité, sinon en ligne.
+  const meta: SurahMeta = localMeta
+    ? { ...localMeta, revelationType: localMeta.revelationType as "Meccan" | "Medinan" }
+    : {
+        number: onlineArabic!.number,
+        name: onlineArabic!.name,
+        englishName: onlineArabic!.englishName,
+        englishNameTranslation: onlineArabic!.englishNameTranslation,
+        numberOfAyahs: onlineArabic!.numberOfAyahs,
+        revelationType: onlineArabic!.revelationType as "Meccan" | "Medinan",
+      };
+
+  // Texte arabe : édition en ligne (avec juz/page) si dispo, sinon données locales.
+  const source =
+    onlineArabic?.ayahs ??
+    localArabic.map((a) => ({
+      number: 0,
+      numberInSurah: a.n,
+      text: a.text,
+      juz: 0,
+      page: 0,
+      hizbQuarter: 0,
+      sajda: false as boolean,
+    }));
 
   // Strip Bismillah from ayah 1 for all surahs except 1 and 9
   const needsStrip = meta.number !== 1 && meta.number !== 9;
 
-  const ayahs: AyahData[] = arabic.ayahs.map((a, i) => {
+  const ayahs: AyahData[] = source.map((a, i) => {
     let text = a.text;
     if (needsStrip && a.numberInSurah === 1) {
       text = stripBasmala(text);
@@ -128,8 +196,8 @@ export async function getSurah(surahNumber: number): Promise<SurahResult> {
       number: a.number,
       numberInSurah: a.numberInSurah,
       text,
-      transliteration: translit.ayahs[i]?.text ?? "",
-      translation: translation.ayahs[i]?.text ?? "",
+      transliteration: translit[i]?.text ?? "",
+      translation: translation[i]?.text ?? "",
       juz: a.juz,
       page: a.page,
       hizbQuarter: a.hizbQuarter,
