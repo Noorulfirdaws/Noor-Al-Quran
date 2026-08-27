@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "../../../server/auth";
 import { getServerPlan } from "../../../server/subscription";
 import { consumeQuota, refundQuota } from "../../../server/usage";
+import { rateLimit, clientIp, tooMany } from "../../../server/ratelimit";
 
 /**
  * POST /api/recite/score
@@ -65,6 +66,13 @@ export async function POST(req: NextRequest) {
       { status: 401 }
     );
   }
+
+  // Burst rate-limit the paid/AI endpoint (on top of the monthly quota): cap
+  // per user, with an IP fallback, so no account can hammer the scoring service.
+  const rl = rateLimit(`score:${session.userId}`, 12, 60_000);        // 12 / min per user
+  const rlIp = rateLimit(`score-ip:${clientIp(req)}`, 20, 60_000);    // 20 / min per IP
+  if (!rl.ok) return tooMany(rl.retryAfter);
+  if (!rlIp.ok) return tooMany(rlIp.retryAfter);
 
   let form: FormData;
   try {

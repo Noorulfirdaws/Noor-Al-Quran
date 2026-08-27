@@ -38,6 +38,7 @@ import {
   alignRecitation, type AlignResult,
   isSpeechSupported, createRecognition, type RecognitionHandle,
 } from "../services/reciteService";
+import MicPrivacyNote from "./MicPrivacyNote";
 
 /* ─── Main component ─── */
 export default function AIRecitationDemo() {
@@ -311,6 +312,7 @@ export default function AIRecitationDemo() {
             Click the mic and recite. Noor-ul-Quran listens word-by-word and detects mistakes in real time.
           </p>
         </div>
+        <MicPrivacyNote className="mt-4" />
       </div>
 
       {/* Main panel */}

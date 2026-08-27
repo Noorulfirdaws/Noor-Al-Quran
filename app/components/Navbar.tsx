@@ -104,21 +104,21 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop centre links */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden lg:flex items-center">
               {navLinks.map((l) => (
                 <a
                   key={l.label}
                   href={l.href}
-                  className="relative text-white/70 hover:text-white px-5 py-2 text-sm font-medium transition-colors duration-150 group"
+                  className="relative text-white/70 hover:text-white px-3 py-2 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 group"
                 >
                   {l.label}
-                  <span className="absolute bottom-0 left-5 right-5 h-px bg-[#57d996] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                  <span className="absolute bottom-0 left-3 right-3 h-px bg-[#57d996] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
                 </a>
               ))}
             </div>
 
             {/* Desktop right buttons */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-3">
               {isAuthed ? (
                 <>
                   <span className="flex items-center gap-1.5 text-xs text-white/60">
@@ -128,7 +128,7 @@ export default function Navbar() {
                   </span>
                   <Link
                     href="/quran"
-                    className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-5 py-2 rounded-full text-sm transition-all active:scale-95 shadow-[0_0_16px_rgba(87,217,150,0.35)]"
+                    className="bg-[#57d996] hover:bg-[#6ff2a8] text-black font-bold px-4 py-1.5 rounded-full text-[13px] whitespace-nowrap transition-all active:scale-95 shadow-[0_0_16px_rgba(87,217,150,0.35)]"
                   >
                     Open Quran
                   </Link>
@@ -159,7 +159,7 @@ export default function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              className="md:hidden text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              className="lg:hidden text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
               onClick={() => setOpen(!open)}
               aria-label={open ? "Close menu" : "Open menu"}
             >
@@ -170,7 +170,7 @@ export default function Navbar() {
 
         {/* Mobile drawer */}
         {open && (
-          <div className="md:hidden bg-[#070a08]/97 backdrop-blur-md border-t border-[#57d996]/10">
+          <div className="lg:hidden bg-[#070a08]/97 backdrop-blur-md border-t border-[#57d996]/10">
             <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-1">
               {navLinks.map((l) => (
                 <a

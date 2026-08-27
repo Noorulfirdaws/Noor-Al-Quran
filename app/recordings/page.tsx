@@ -9,6 +9,7 @@ import {
 import { Mic, Play, Pause, Trash2, GitCompare, X, Calendar, Clock, Sparkles, Loader2 } from "lucide-react";
 import { isWhisperSupported, analyzeWithWhisper, type WhisperProgress } from "../services/whisperService";
 import { getSurah } from "../services/quranService";
+import MicPrivacyNote from "../components/MicPrivacyNote";
 
 export default function RecordingsPage() {
   const [recs, setRecs] = useState<RecordingMeta[]>([]);
@@ -45,8 +46,9 @@ export default function RecordingsPage() {
           <h1 className="text-3xl font-black">My Recordings</h1>
           <p className="text-white/40 text-sm mt-1">
             Every recitation is recorded privately on your device. Replay it, hear your progress, and compare two
-            sessions side by side. Nothing leaves your browser.
+            sessions side by side.
           </p>
+          <MicPrivacyNote className="mt-4" />
         </div>
 
         {/* Compare bar */}
