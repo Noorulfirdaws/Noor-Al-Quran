@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       eyebrow="Legal"
       title="Privacy Policy"
       subtitle="How Noor-ul-Quran collects, uses, and protects your information."
-      updated="June 14, 2026"
+      updated="September 5, 2026"
     >
       <p>
         Your trust matters to us. This policy explains what data we collect when you use
@@ -25,9 +25,18 @@ export default function PrivacyPage() {
 
       <InfoH2>Microphone &amp; recitation</InfoH2>
       <p>
-        The AI recitation feature uses your browser&apos;s built-in speech recognition. Audio is processed to detect
-        recitation mistakes and is not stored on our servers. You control microphone access through your browser, and
-        you can revoke it at any time.
+        Instant, word-by-word recitation feedback runs <strong className="text-white">entirely in your browser</strong> —
+        that audio never leaves your device. If you use the deeper AI tajweed analysis, the recording is sent securely
+        over an encrypted connection to our scoring service <strong className="text-white">for processing only</strong>,
+        and is not stored afterwards. You control microphone access through your browser and can revoke it at any time.
+      </p>
+
+      <InfoH2>Payments</InfoH2>
+      <p>
+        Paid subscriptions are processed by <strong className="text-white">Stripe</strong>, our payment provider. Your
+        card details are entered on Stripe&apos;s secure systems and are never seen or stored by us — we only keep a
+        customer/subscription reference so we can manage your plan. Stripe&apos;s handling of your payment data is
+        governed by its own privacy policy.
       </p>
 
       <InfoH2>How we use your data</InfoH2>
@@ -39,13 +48,13 @@ export default function PrivacyPage() {
       <InfoH2>Your rights</InfoH2>
       <p>
         You can access, correct, export, or delete your data at any time by contacting us at{" "}
-        <a href="mailto:privacy@noor-ul-quran.com" className="text-[#57d996] hover:underline">privacy@noor-ul-quran.com</a>.
+        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>.
       </p>
 
       <InfoH2>Contact</InfoH2>
       <p>
         Questions about this policy? Email{" "}
-        <a href="mailto:privacy@noor-ul-quran.com" className="text-[#57d996] hover:underline">privacy@noor-ul-quran.com</a>.
+        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );

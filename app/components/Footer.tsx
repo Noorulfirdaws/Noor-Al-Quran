@@ -81,6 +81,7 @@ export default function Footer() {
       links: [
         { label: t.footerPrivacy, href: "/privacy" },
         { label: t.footerTerms, href: "/terms" },
+        { label: "Refunds", href: "/refund" },
         { label: t.footerCookies, href: "/cookies" },
       ],
     },
