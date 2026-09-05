@@ -8,6 +8,7 @@ import {
 } from "../services/gamificationService";
 import MemorizationHeatmap from "../components/quran/MemorizationHeatmap";
 import HifzTimeline from "../components/quran/HifzTimeline";
+import BillingCard from "../components/BillingCard";
 import { getGoal, goalProgress, fmtDate } from "../services/goalService";
 import { Flame, Zap, Trophy, Star, BookOpen, Target, TrendingUp, BarChart3, ArrowRight, Mic, Lock, CalendarCheck } from "lucide-react";
 
@@ -204,6 +205,11 @@ export default function DashboardPage() {
             )}
           </>
         )}
+
+        {/* Subscription / billing */}
+        <div className="mt-8">
+          <BillingCard />
+        </div>
 
         {/* CTA */}
         <div className="mt-8 flex gap-3 flex-wrap">
