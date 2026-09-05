@@ -49,6 +49,24 @@ export async function POST(req: NextRequest) {
         if (userId) await syncSubscription(userId, plan, sub);
         break;
       }
+
+      // ── Renewal payments (dunning + records) ──
+      // invoice.paid       → a charge succeeded (initial or renewal): keep active + refresh period end.
+      // invoice.payment_failed → a charge failed: Stripe auto-retries (Smart Retries); we reflect
+      //   past_due so the app knows. Access stays until the subscription itself is cancelled.
+      case "invoice.paid":
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice;
+        const subId = (inv as unknown as { subscription?: string | null }).subscription;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(String(subId));
+          const userId = sub.metadata?.userId || "";
+          const plan = sub.metadata?.plan || "premium";
+          if (userId) await syncSubscription(userId, plan, sub);
+        }
+        break;
+      }
+
       default:
         break;
     }
