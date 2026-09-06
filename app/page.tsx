@@ -17,6 +17,8 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <Navbar />
+      {/* Anchor for the "Features" nav link so it returns to the top hero. */}
+      <div id="top" aria-hidden />
       <HeroPricing />
       <StatsBar />
       <AIFeatureProof />
