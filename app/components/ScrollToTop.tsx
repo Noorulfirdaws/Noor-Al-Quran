@@ -66,7 +66,10 @@ export default function ScrollToTop() {
 
       e.preventDefault();
       intentionalScroll.current = true;      // user asked to scroll — guard stands down
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // "#top" means the hero — scroll the window to 0 (robust even for a
+      // zero-height anchor, which scrollIntoView won't move to).
+      if (id === "top") window.scrollTo({ top: 0, behavior: "smooth" });
+      else el.scrollIntoView({ behavior: "smooth", block: "start" });
       stripHash();                           // never let the hash linger
     };
 
@@ -88,6 +91,7 @@ export default function ScrollToTop() {
         intentionalScroll.current = true;    // a real deep-link IS an intentional scroll
         // Honour a forward deep-link (e.g. clicking "Features") once, then strip.
         const go = () => {
+          if (hash.slice(1) === "top") { window.scrollTo(0, 0); stripHash(); return; }
           const target = document.getElementById(hash.slice(1));
           if (target) target.scrollIntoView({ block: "start" });
           stripHash();
