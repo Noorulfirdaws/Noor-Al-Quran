@@ -63,7 +63,7 @@ function CheckoutPreview() {
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Full name", placeholder: "Noor Admin", type: "text" },
-            { label: "Email", placeholder: "admin@noor-ul-quran.com", type: "email" },
+            { label: "Email", placeholder: "admin@noorulfirdaws.com", type: "email" },
             { label: "Card number", placeholder: "4242 4242 4242 4242", type: "text" },
             { label: "Expiry / CVV", placeholder: "12/28  •  123", type: "text" },
           ].map((f) => (

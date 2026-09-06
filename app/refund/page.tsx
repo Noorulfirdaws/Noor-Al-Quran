@@ -60,7 +60,7 @@ export default function RefundPage() {
       <InfoH2>How to request a refund</InfoH2>
       <p>
         Email{" "}
-        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>{" "}
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>{" "}
         from the email address on your account, and tell us which charge you&apos;d like refunded. We aim to reply within
         1–2 business days.
       </p>

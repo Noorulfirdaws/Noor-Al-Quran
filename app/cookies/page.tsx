@@ -36,7 +36,7 @@ export default function CookiesPage() {
       <InfoH2>Contact</InfoH2>
       <p>
         Questions? Email{" "}
-        <a href="mailto:privacy@noor-ul-quran.com" className="text-[#57d996] hover:underline">privacy@noor-ul-quran.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );

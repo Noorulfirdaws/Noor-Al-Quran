@@ -69,7 +69,7 @@ export default function TermsPage() {
       <InfoH2>Contact</InfoH2>
       <p>
         Questions? Email{" "}
-        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );

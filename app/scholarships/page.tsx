@@ -15,7 +15,7 @@ export default function ScholarshipsPage() {
       <p>
         Applications open periodically. To be notified when the next round opens, or to tell us about your situation,
         email{" "}
-        <a href="mailto:scholarships@noor-ul-quran.com" className="text-[#57d996] hover:underline">scholarships@noor-ul-quran.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );

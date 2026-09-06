@@ -16,7 +16,7 @@ export default function CareersPage() {
       <p>
         If that&apos;s you — engineers, designers, Arabic/tajweed specialists, or community builders — send a short
         note and your work to{" "}
-        <a href="mailto:careers@noor-ul-quran.com" className="text-[#57d996] hover:underline">careers@noor-ul-quran.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
         We read every message.
       </p>
     </InfoPage>

@@ -14,7 +14,7 @@ export default function FeatureRequestsPage() {
       </p>
       <p>
         Send your idea to{" "}
-        <a href="mailto:feedback@noor-ul-quran.com" className="text-[#57d996] hover:underline">feedback@noor-ul-quran.com</a>{" "}
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>{" "}
         with a sentence or two about the problem you&apos;re trying to solve. The more concrete, the better.
       </p>
     </InfoPage>

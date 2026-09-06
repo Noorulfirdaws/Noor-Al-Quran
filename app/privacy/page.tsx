@@ -48,13 +48,13 @@ export default function PrivacyPage() {
       <InfoH2>Your rights</InfoH2>
       <p>
         You can access, correct, export, or delete your data at any time by contacting us at{" "}
-        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
 
       <InfoH2>Contact</InfoH2>
       <p>
         Questions about this policy? Email{" "}
-        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );

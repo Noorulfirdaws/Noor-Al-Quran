@@ -70,7 +70,7 @@ export default function FAQ() {
             </h2>
             <p className="text-white/40 text-sm leading-relaxed">
               Can't find what you're looking for?{" "}
-              <a href="mailto:support@noor-ul-quran.com" className="text-[#57d996] hover:underline">
+              <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">
                 Contact support →
               </a>
             </p>

@@ -11,10 +11,10 @@ export default function SupportPage() {
       subtitle="Need a hand? Here's how to get help with Noor-ul-Quran."
     >
       <div className="grid sm:grid-cols-3 gap-4 not-prose mb-4">
-        <a href="mailto:support@noorulfirdaws.com" className="bg-white/5 border border-white/10 hover:border-[#57d996]/40 rounded-2xl p-5 transition-all">
+        <a href="mailto:contact@noorulfirdaws.com" className="bg-white/5 border border-white/10 hover:border-[#57d996]/40 rounded-2xl p-5 transition-all">
           <Mail size={20} className="text-[#57d996] mb-2" />
           <div className="text-white font-bold text-sm">Email us</div>
-          <div className="text-white/40 text-xs mt-1">support@noorulfirdaws.com</div>
+          <div className="text-white/40 text-xs mt-1">contact@noorulfirdaws.com</div>
         </a>
         <Link href="/#faq" className="bg-white/5 border border-white/10 hover:border-[#57d996]/40 rounded-2xl p-5 transition-all">
           <MessageCircle size={20} className="text-[#57d996] mb-2" />
@@ -48,7 +48,7 @@ export default function SupportPage() {
       <InfoH2>Still stuck?</InfoH2>
       <p>
         Email{" "}
-        <a href="mailto:support@noorulfirdaws.com" className="text-[#57d996] hover:underline">support@noorulfirdaws.com</a>{" "}
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>{" "}
         and we&apos;ll get back to you within 1–2 business days.
       </p>
     </InfoPage>

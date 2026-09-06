@@ -14,7 +14,7 @@ export default function HifzNetworkPage() {
       </p>
       <p>
         We&apos;re building out the network now. To join the waitlist and be matched with revision partners, email{" "}
-        <a href="mailto:community@noor-ul-quran.com" className="text-[#57d996] hover:underline">community@noor-ul-quran.com</a>.
+        <a href="mailto:contact@noorulfirdaws.com" className="text-[#57d996] hover:underline">contact@noorulfirdaws.com</a>.
       </p>
     </InfoPage>
   );
